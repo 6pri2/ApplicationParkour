@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
@@ -15,6 +17,60 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.applicationparkour.ui.theme.ApplicationParkourTheme
 import kotlinx.coroutines.launch
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.GET
+import retrofit2.http.Header
+import java.time.LocalDate
+import java.time.Period
+
+
+// --- Configuration Retrofit ---
+
+// Data class pour représenter une compétition
+data class Competition(
+    val id: Int,
+    val name: String,
+    val age_min: Int,
+    val age_max: Int,
+    val gender: String,
+    val has_retry: Int,
+    val status: String
+)
+
+data class Competitor(
+    val first_name: String,
+    val last_name: String,
+    val born_at: String, // Format "yyyy-MM-dd"
+    val gender: String
+)
+
+
+
+// Interface de l'API
+interface ApiService {
+    @GET("competitions")
+    suspend fun getCompetitions(@Header("Authorization") token: String): List<Competition>
+
+    @GET("competitors")
+    suspend fun getCompetitors(@Header("Authorization") token: String): List<Competitor>
+}
+
+
+// Objet singleton pour créer l'instance Retrofit
+object ApiClient {
+    private const val BASE_URL = "http://92.222.217.100/api/"
+
+    val apiService: ApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
+    }
+}
+
+// --- Activité principale ---
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,18 +103,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Icone menu hamburger
+    Column(modifier = Modifier.fillMaxSize()) {
         IconButton(onClick = { openDrawer() }) {
-            Icon(
-                imageVector = Icons.Default.Menu,
-                contentDescription = "Open Drawer"
-            )
+            Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
         }
-
-        // Affichage de la page en fonction de currentPage
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (currentPage) {
                 0 -> CompetitionScreen()
@@ -73,11 +121,9 @@ fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
 @Composable
 fun SlidingMenu(setPage: (Int) -> Unit) {
     val menuItems = listOf("Compétition", "Compétiteur", "Courses", "Obstacles")
-
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Text(text = "Menu")
         Spacer(modifier = Modifier.height(20.dp))
-
         menuItems.forEachIndexed { index, title ->
             TextButton(onClick = { setPage(index) }) {
                 Text(title)
@@ -88,23 +134,97 @@ fun SlidingMenu(setPage: (Int) -> Unit) {
 
 @Composable
 fun CompetitionScreen() {
-    Text("Écran Compétition")
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    val competitions by produceState<List<Competition>?>(initialValue = null) {
+        try {
+            val response = ApiClient.apiService.getCompetitions(token)
+            value = response
+            println("✅ Réponse API : $response") // Log dans la console
+        } catch (e: Exception) {
+            value = emptyList()
+            println("❌ Erreur API : ${e.message}") // Log erreur
+        }
+    }
+
+
+    when {
+        competitions == null -> CircularProgressIndicator()
+        competitions!!.isEmpty() -> Text("Aucune compétition trouvée")
+        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            items(competitions!!) { competition ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Nom: ${competition.name}", style = MaterialTheme.typography.bodyLarge)
+                        Text(text = "Âge: ${competition.age_min} - ${competition.age_max} ans")
+                        Text(text = "Genre: ${if (competition.gender == "H") "Homme" else "Femme"}")
+                        Text(text = "Retry: ${if (competition.has_retry == 1) "Oui" else "Non"}")
+                        Text(text = "Statut: ${competition.status}")
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
 fun CompetitorScreen() {
-    Text("Écran Compétiteur")
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+
+    val competitors by produceState<List<Competitor>?>(initialValue = null) {
+        try {
+            val response = ApiClient.apiService.getCompetitors(token)
+            value = response
+            println("✅ Réponse API : $response") // Log dans la console
+        } catch (e: Exception) {
+            value = emptyList()
+            println("❌ Erreur API : ${e.message}") // Log erreur
+        }
+    }
+
+    when {
+        competitors == null -> CircularProgressIndicator()
+        competitors!!.isEmpty() -> Text("Aucun compétiteur trouvé")
+        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            items(competitors!!) { competitor ->
+                val fullName = "${competitor.first_name} ${competitor.last_name}"
+                val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
+
+                // Calcul de l'âge
+                val age = calculateAge(birthDate)
+
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
+                        Text(text = "Âge: $age ans")
+                        Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+                    }
+                }
+            }
+        }
+    }
 }
 
-@Composable
-fun CoursesScreen() {
-    Text("Écran Courses")
+fun calculateAge(bornAt: String): Int {
+    // Convertir la date de naissance en LocalDate
+    val birthDate = LocalDate.parse(bornAt)
+    val currentDate = LocalDate.now()
+
+    // Calculer l'âge en années
+    val age = Period.between(birthDate, currentDate).years
+    return age
 }
 
+
 @Composable
-fun ObstaclesScreen() {
-    Text("Écran Obstacles")
-}
+fun CoursesScreen() { Text("Écran Courses") }
+@Composable
+fun ObstaclesScreen() { Text("Écran Obstacles") }
 
 @Preview(showBackground = true)
 @Composable
