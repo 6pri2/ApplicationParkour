@@ -29,10 +29,9 @@ class MainActivity : ComponentActivity() {
                 ModalNavigationDrawer(
                     drawerState = drawerState,
                     drawerContent = {
-                        SlidingMenu(setPage = {
-                            page -> currentPage = page
+                        SlidingMenu(setPage = { page ->
+                            currentPage = page
                             scope.launch { drawerState.close() }
-
                         })
                     }
                 ) {
@@ -61,29 +60,55 @@ fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
 
         // Affichage de la page en fonction de currentPage
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Page ${currentPage + 1}")
+            when (currentPage) {
+                0 -> CompetitionScreen()
+                1 -> CompetitorScreen()
+                2 -> CoursesScreen()
+                3 -> ObstaclesScreen()
+            }
         }
     }
 }
 
 @Composable
 fun SlidingMenu(setPage: (Int) -> Unit) {
+    val menuItems = listOf("Compétition", "Compétiteur", "Courses", "Obstacles")
+
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Text(text = "Menu")
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Liste des pages
-        for (i in 0..3) {
-            TextButton(onClick = { setPage(i) }) {
-                Text("Page ${i + 1}")
+        menuItems.forEachIndexed { index, title ->
+            TextButton(onClick = { setPage(index) }) {
+                Text(title)
             }
         }
     }
 }
 
+@Composable
+fun CompetitionScreen() {
+    Text("Écran Compétition")
+}
+
+@Composable
+fun CompetitorScreen() {
+    Text("Écran Compétiteur")
+}
+
+@Composable
+fun CoursesScreen() {
+    Text("Écran Courses")
+}
+
+@Composable
+fun ObstaclesScreen() {
+    Text("Écran Obstacles")
+}
+
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun PreviewApp() {
     ApplicationParkourTheme {
         MainContent(currentPage = 0, openDrawer = {})
     }
