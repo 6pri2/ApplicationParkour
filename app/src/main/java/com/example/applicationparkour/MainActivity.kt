@@ -24,6 +24,8 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import java.time.LocalDate
 import java.time.Period
+import retrofit2.http.Body
+import retrofit2.http.POST
 
 
 // --- Configuration Retrofit ---
@@ -75,6 +77,13 @@ interface ApiService {
 
     @GET("obstacles")
     suspend fun getObstacles(@Header("Authorization") token: String): List<Obstacles>
+
+    @POST("competitors")
+    suspend fun addCompetitor(
+        @Header("Authorization") token: String,
+        @Body competitor: Competitor
+    ): Competitor
+
 
 }
 
@@ -195,40 +204,186 @@ fun CompetitionScreen() {
 @Composable
 fun CompetitorScreen() {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
 
-    val competitors by produceState<List<Competitor>?>(initialValue = null) {
-        try {
-            val response = ApiClient.apiService.getCompetitors(token)
-            value = response
-            println("✅ Réponse API : $response") // Log dans la console
-        } catch (e: Exception) {
-            value = emptyList()
-            println("❌ Erreur API : ${e.message}") // Log erreur
+    val scope = rememberCoroutineScope()
+
+    // Fonction pour mettre à jour la liste des compétiteurs
+    val updateCompetitors = {
+        scope.launch {
+            try {
+                competitors = ApiClient.apiService.getCompetitors(token)
+            } catch (e: Exception) {
+                println("Erreur lors du chargement des compétiteurs : ${e.message}")
+            }
         }
     }
 
-    when {
-        competitors == null -> CircularProgressIndicator()
-        competitors!!.isEmpty() -> Text("Aucun compétiteur trouvé")
-        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            items(competitors!!) { competitor ->
-                val fullName = "${competitor.first_name} ${competitor.last_name}"
-                val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
+    // Charger les compétiteurs au démarrage de l'écran
+    LaunchedEffect(true) {
+        updateCompetitors() // Charger les compétiteurs lorsque l'écran est chargé
+    }
 
-                // Calcul de l'âge
-                val age = calculateAge(birthDate)
+    // Affichage du dialog pour ajouter un compétiteur
+    if (showDialog) {
+        AddCompetitorDialog(
+            token = token,
+            onDismiss = { showDialog = false },
+            onCompetitorsUpdated = {
+                updateCompetitors() // Mettre à jour la liste des compétiteurs
+                showDialog = false
+            }
+        )
+    }
 
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
-                        Text(text = "Âge: $age ans")
-                        Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+    // Affichage de la liste des compétiteurs
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        // Afficher la liste des compétiteurs
+        when {
+            competitors == null -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally)) // Si les compétiteurs sont en cours de chargement
+            }
+            competitors!!.isEmpty() -> {
+                Text("Aucun compétiteur trouvé.", modifier = Modifier.align(Alignment.CenterHorizontally)) // Si aucune donnée n'est disponible
+            }
+            else -> {
+                LazyColumn(modifier = Modifier.weight(1f)) { // Donne de l'espace au LazyColumn
+                    items(competitors!!) { competitor ->
+                        val fullName = "${competitor.first_name} ${competitor.last_name}"
+                        val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
+                        // Calculer l'âge
+                        val age = calculateAge(birthDate)
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            elevation = CardDefaults.cardElevation(4.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
+                                Text(text = "Âge: $age ans")
+                                Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp)) // Un espacement entre la liste et le bouton
+
+        // Le bouton "Ajouter un compétiteur"
+        Button(
+            onClick = { showDialog = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Ajouter un compétiteur")
+        }
+    }
+}
+
+
+
+@Composable
+fun AddCompetitorDialog(
+    token: String,
+    onDismiss: () -> Unit,
+    onCompetitorsUpdated: () -> Unit // Callback pour mettre à jour la liste des compétiteurs
+) {
+    val scope = rememberCoroutineScope()
+
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("H") }
+    var birthDate by remember { mutableStateOf("") }
+
+    // Variable pour afficher le message d'erreur
+    var errorMessage by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ajouter un compétiteur") },
+        text = {
+            Column {
+                OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("Prénom") })
+                OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("Nom") })
+                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Téléphone") })
+                OutlinedTextField(value = birthDate, onValueChange = { birthDate = it }, label = { Text("Date de naissance (YYYY-MM-DD)") })
+
+                Text("Genre:")
+                Row {
+                    RadioButton(
+                        selected = gender == "H",
+                        onClick = { gender = "H" }
+                    )
+                    Text("Homme", modifier = Modifier.padding(start = 8.dp))
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(
+                        selected = gender == "F",
+                        onClick = { gender = "F" }
+                    )
+                    Text("Femme", modifier = Modifier.padding(start = 8.dp))
+                }
+
+                // Affichage du message d'erreur si les champs ne sont pas remplis
+                if (errorMessage.isNotEmpty()) {
+                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    // Validation des champs
+                    if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty() || birthDate.isEmpty()) {
+                        errorMessage = "Tous les champs doivent être remplis"
+                    } else {
+                        errorMessage = "" // Réinitialiser le message d'erreur
+
+                        // Création du compétiteur
+                        val newCompetitor = Competitor(firstName, lastName, email, gender, phone, birthDate)
+
+                        // Envoi des données à l'API
+                        scope.launch {
+                            try {
+                                ApiClient.apiService.addCompetitor(token, newCompetitor)
+                                onCompetitorsUpdated() // Mettre à jour la liste des compétiteurs
+                                onDismiss() // Fermer la fenêtre
+                            } catch (e: Exception) {
+                                println("Erreur : ${e.message}")
+                            }
+                        }
+                    }
+                }
+            ) {
+                Text("Ajouter")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
+}
+
+
+@Composable
+fun CompetitorCard(competitor: Competitor) {
+    val fullName = "${competitor.first_name} ${competitor.last_name}"
+    val age = calculateAge(competitor.born_at)
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Âge: $age ans")
+            Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
         }
     }
 }
