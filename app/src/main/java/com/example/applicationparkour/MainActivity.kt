@@ -135,6 +135,7 @@ fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
                 1 -> CompetitorScreen()
                 2 -> CoursesScreen()
                 3 -> ObstaclesScreen()
+                4 -> ArbitragesScreen()
             }
         }
     }
@@ -142,7 +143,7 @@ fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
 
 @Composable
 fun SlidingMenu(setPage: (Int) -> Unit) {
-    val menuItems = listOf("Compétition", "Compétiteur", "Courses", "Obstacles")
+    val menuItems = listOf("Compétition", "Compétiteur", "Courses", "Obstacles", "Arbitrage")
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Text(text = "Menu")
         Spacer(modifier = Modifier.height(20.dp))
@@ -318,6 +319,15 @@ fun ObstaclesScreen() {
     }
 }
 
+@Composable
+fun ArbitragesScreen(){
+   Box(
+       modifier = Modifier.fillMaxSize(),
+       contentAlignment = Alignment.Center
+   ) {
+       Text(text = "À faire", style = MaterialTheme.typography.headlineMedium)
+   }
+}
 
 @Preview(showBackground = true)
 @Composable
