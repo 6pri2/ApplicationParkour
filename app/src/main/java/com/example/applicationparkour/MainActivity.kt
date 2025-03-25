@@ -30,6 +30,7 @@ import java.time.Period
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 
@@ -94,7 +95,14 @@ interface ApiService {
     suspend fun deleteCompetitor(
         @Header("Authorization") token: String,
         @Path("id") competitorId: Int
-    ): Response<Unit>  // Unité vide pour indiquer que rien n'est renvoyé après la suppression
+    ): Response<Unit>
+
+    @PUT("competitors/{id}")
+    suspend fun updateCompetitor(
+        @Header("Authorization") token: String,
+        @Path("id") competitorId: Int,
+        @Body competitor: Competitor
+    ): Competitor
 }
 
 
@@ -238,10 +246,11 @@ fun CompetitorScreen() {
         updateCompetitors() // Charger les compétiteurs lorsque l'écran est chargé
     }
 
-    // Affichage du dialog pour ajouter un compétiteur
+    // Affichage du dialog pour ajouter ou modifier un compétiteur
     if (showDialog) {
         AddCompetitorDialog(
             token = token,
+            competitor = competitorToEdit, // Passer le compétiteur à modifier (null si ajout)
             onDismiss = { showDialog = false },
             onCompetitorsUpdated = {
                 updateCompetitors() // Mettre à jour la liste des compétiteurs
@@ -284,7 +293,6 @@ fun CompetitorScreen() {
 
     // Affichage de la liste des compétiteurs
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        // Afficher la liste des compétiteurs
         when {
             competitors == null -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally)) // Si les compétiteurs sont en cours de chargement
@@ -336,7 +344,9 @@ fun CompetitorScreen() {
 
         // Le bouton "Ajouter un compétiteur"
         Button(
-            onClick = { showDialog = true },
+            onClick = {
+                competitorToEdit = null
+                showDialog = true },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Ajouter un compétiteur")
@@ -344,27 +354,43 @@ fun CompetitorScreen() {
     }
 }
 
+
 @Composable
 fun AddCompetitorDialog(
     token: String,
+    competitor: Competitor? = null, // Si un compétiteur est passé, on le modifie
     onDismiss: () -> Unit,
     onCompetitorsUpdated: () -> Unit // Callback pour mettre à jour la liste des compétiteurs
 ) {
     val scope = rememberCoroutineScope()
 
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("H") }
-    var birthDate by remember { mutableStateOf("") }
+    // Si nous sommes en mode modification, pré-remplir les champs
+    var firstName by remember { mutableStateOf(competitor?.first_name ?: "") }
+    var lastName by remember { mutableStateOf(competitor?.last_name ?: "") }
+    var email by remember { mutableStateOf(competitor?.email ?: "") }
+    var phone by remember { mutableStateOf(competitor?.phone ?: "") }
+    var gender by remember { mutableStateOf(competitor?.gender ?: "H") }
+    var birthDate by remember { mutableStateOf(competitor?.born_at ?: "") }
+
+    // Reset des valeurs quand la fenêtre est fermée
+    LaunchedEffect(competitor) {
+        if (competitor == null) {
+            // Si aucun compétiteur n'est passé, réinitialiser les champs
+            firstName = ""
+            lastName = ""
+            email = ""
+            phone = ""
+            gender = "H"
+            birthDate = ""
+        }
+    }
 
     // Variable pour afficher le message d'erreur
     var errorMessage by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ajouter un compétiteur") },
+        title = { Text(if (competitor == null) "Ajouter un compétiteur" else "Modifier un compétiteur") },
         text = {
             Column {
                 OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("Prénom") })
@@ -406,8 +432,8 @@ fun AddCompetitorDialog(
                         errorMessage = ""
 
                         // Créer un nouveau compétiteur sans l'ID
-                        val newCompetitor = Competitor(
-                            id = 0, // Ne pas utiliser l'ID dans la requête
+                        val updatedCompetitor = Competitor(
+                            id = competitor?.id ?: 0, // Si modification, utiliser l'ID existant
                             first_name = firstName,
                             last_name = lastName,
                             email = email,
@@ -418,10 +444,17 @@ fun AddCompetitorDialog(
 
                         scope.launch {
                             try {
-                                // Envoie du compétiteur à l'API
-                                ApiClient.apiService.addCompetitor(token, newCompetitor)
+                                if (competitor == null) {
+                                    // Ajout d'un nouveau compétiteur
+                                    ApiClient.apiService.addCompetitor(token, updatedCompetitor)
+
+                                } else {
+                                    // Mise à jour du compétiteur
+                                    ApiClient.apiService.updateCompetitor(token, updatedCompetitor.id, updatedCompetitor)
+                                }
                                 onCompetitorsUpdated() // Mettre à jour la liste des compétiteurs
                                 onDismiss() // Fermer la fenêtre
+
                             } catch (e: Exception) {
                                 println("Erreur : ${e.message}")
                             }
@@ -429,7 +462,7 @@ fun AddCompetitorDialog(
                     }
                 }
             ) {
-                Text("Ajouter")
+                Text(if (competitor == null) "Ajouter" else "Modifier")
             }
         },
         dismissButton = {
@@ -437,6 +470,7 @@ fun AddCompetitorDialog(
         }
     )
 }
+
 
 
 
