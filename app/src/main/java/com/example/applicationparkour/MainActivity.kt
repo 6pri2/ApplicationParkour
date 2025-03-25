@@ -41,10 +41,19 @@ data class Competition(
 data class Competitor(
     val first_name: String,
     val last_name: String,
-    val born_at: String, // Format "yyyy-MM-dd"
-    val gender: String
+    val email: String,
+    val gender: String,
+    val phone: String,
+    val born_at: String // Format "yyyy-MM-dd"
 )
 
+data class Courses(
+    val id: Int,
+    val name: String,
+    val max_duration: Int,
+    val position: Int,
+    val is_over: Int
+)
 
 
 // Interface de l'API
@@ -54,6 +63,10 @@ interface ApiService {
 
     @GET("competitors")
     suspend fun getCompetitors(@Header("Authorization") token: String): List<Competitor>
+
+    @GET("courses")
+    suspend fun getCourses(@Header("Authorization") token: String): List<Courses>
+
 }
 
 
@@ -222,7 +235,44 @@ fun calculateAge(bornAt: String): Int {
 
 
 @Composable
-fun CoursesScreen() { Text("Écran Courses") }
+fun CoursesScreen() {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+
+    val courses by produceState<List<Courses>?>(initialValue = null) {
+        try {
+            val response = ApiClient.apiService.getCourses(token)
+            value = response
+            println("✅ Réponse API Courses: $response")
+        } catch (e: Exception) {
+            value = emptyList()
+            println("❌ Erreur API Courses: ${e.message}")
+        }
+    }
+
+    when {
+        courses == null -> CircularProgressIndicator()
+        courses!!.isEmpty() -> Text("Aucune course trouvée")
+        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            items(courses!!) { course ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Nom: ${course.name}", style = MaterialTheme.typography.bodyLarge)
+                        Text(text = "Durée max: ${course.max_duration} sec")
+                        Text(text = "Position: ${course.position}")
+                        Text(text = "Terminée: ${if (course.is_over == 1) "Oui" else "Non"}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
 @Composable
 fun ObstaclesScreen() { Text("Écran Obstacles") }
 
