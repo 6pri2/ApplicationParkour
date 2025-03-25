@@ -1,5 +1,6 @@
 package com.example.applicationparkour
 
+import android.graphics.Picture
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -55,6 +56,11 @@ data class Courses(
     val is_over: Int
 )
 
+data class Obstacles(
+    val id: Int,
+    val name: String,
+    val picture: String?,
+)
 
 // Interface de l'API
 interface ApiService {
@@ -66,6 +72,9 @@ interface ApiService {
 
     @GET("courses")
     suspend fun getCourses(@Header("Authorization") token: String): List<Courses>
+
+    @GET("obstacles")
+    suspend fun getObstacles(@Header("Authorization") token: String): List<Obstacles>
 
 }
 
@@ -270,11 +279,45 @@ fun CoursesScreen() {
     }
 }
 
-
-
-
 @Composable
-fun ObstaclesScreen() { Text("Écran Obstacles") }
+fun ObstaclesScreen() {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+
+    val obstacles by produceState<List<Obstacles>?>(initialValue = null) {
+        try {
+            val response = ApiClient.apiService.getObstacles(token)
+            value = response
+            println("✅ Réponse API Obstacles: $response")
+        } catch (e: Exception) {
+            value = emptyList()
+            println("❌ Erreur API Obstacles: ${e.message}")
+        }
+    }
+
+    when {
+        obstacles == null -> CircularProgressIndicator()
+        obstacles!!.isEmpty() -> Text("Aucun obstacle trouvé")
+        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            items(obstacles!!) { obstacle ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
+                        if (obstacle.picture != null) {
+                            // Ici, on pourrait afficher une image si l'URL est valide
+                            // AsyncImage(model = obstacle.picture, contentDescription = "Image de l'obstacle")
+                        } else {
+                            Text(text = "Aucune image disponible", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 @Preview(showBackground = true)
 @Composable
