@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,12 +20,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.applicationparkour.ui.theme.ApplicationParkourTheme
 import kotlinx.coroutines.launch
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Header
 import java.time.LocalDate
 import java.time.Period
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
+import coil.compose.AsyncImage
 
 
 // --- Configuration Retrofit ---
@@ -40,6 +49,7 @@ data class Competition(
 )
 
 data class Competitor(
+    val id: Int,
     val first_name: String,
     val last_name: String,
     val email: String,
@@ -59,7 +69,6 @@ data class Courses(
 data class Obstacles(
     val id: Int,
     val name: String,
-    val picture: String?,
 )
 
 // Interface de l'API
@@ -75,6 +84,44 @@ interface ApiService {
 
     @GET("obstacles")
     suspend fun getObstacles(@Header("Authorization") token: String): List<Obstacles>
+
+    @POST("obstacles")
+    suspend fun addObstacles(
+        @Header("Authorization") token: String,
+        @Body obstacles: Obstacles
+    ): Obstacles
+
+    @POST("competitors")
+    suspend fun addCompetitor(
+        @Header("Authorization") token: String,
+        @Body competitor: Competitor
+    ): Competitor
+
+    @DELETE("competitors/{id}")
+    suspend fun deleteCompetitor(
+        @Header("Authorization") token: String,
+        @Path("id") competitorId: Int
+    ): Response<Unit>
+
+    @DELETE("obstacles/{id}")
+    suspend fun deleteObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") obstaclesId: Int
+    ): Response<Unit>
+
+    @PUT("competitors/{id}")
+    suspend fun updateCompetitor(
+        @Header("Authorization") token: String,
+        @Path("id") competitorId: Int,
+        @Body competitor: Competitor
+    ): Competitor
+
+    @PUT("obstacles/{id}")
+    suspend fun updateObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") obstaclesId: Int,
+        @Body obstacles: Obstacles
+    ): Obstacles
 
 }
 
@@ -195,40 +242,271 @@ fun CompetitionScreen() {
 @Composable
 fun CompetitorScreen() {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+    var competitorToEdit by remember { mutableStateOf<Competitor?>(null) }  // Pour l'édition
+    var showDeleteDialog by remember { mutableStateOf(false) }  // Pour la confirmation de suppression
+    var competitorToDelete by remember { mutableStateOf<Competitor?>(null) } // Compétiteur à supprimer
 
-    val competitors by produceState<List<Competitor>?>(initialValue = null) {
-        try {
-            val response = ApiClient.apiService.getCompetitors(token)
-            value = response
-            println("✅ Réponse API : $response") // Log dans la console
-        } catch (e: Exception) {
-            value = emptyList()
-            println("❌ Erreur API : ${e.message}") // Log erreur
+    val scope = rememberCoroutineScope()
+
+    // Fonction pour mettre à jour la liste des compétiteurs
+    val updateCompetitors = {
+        scope.launch {
+            try {
+                competitors = ApiClient.apiService.getCompetitors(token)
+            } catch (e: Exception) {
+                println("Erreur lors du chargement des compétiteurs : ${e.message}")
+            }
         }
     }
 
-    when {
-        competitors == null -> CircularProgressIndicator()
-        competitors!!.isEmpty() -> Text("Aucun compétiteur trouvé")
-        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            items(competitors!!) { competitor ->
-                val fullName = "${competitor.first_name} ${competitor.last_name}"
-                val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
+    // Charger les compétiteurs au démarrage de l'écran
+    LaunchedEffect(true) {
+        updateCompetitors() // Charger les compétiteurs lorsque l'écran est chargé
+    }
 
-                // Calcul de l'âge
-                val age = calculateAge(birthDate)
+    // Affichage du dialog pour ajouter ou modifier un compétiteur
+    if (showDialog) {
+        AddCompetitorDialog(
+            token = token,
+            competitor = competitorToEdit, // Passer le compétiteur à modifier (null si ajout)
+            onDismiss = { showDialog = false },
+            onCompetitorsUpdated = {
+                updateCompetitors() // Mettre à jour la liste des compétiteurs
+                showDialog = false
+            }
+        )
+    }
 
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
+    // Affichage du dialog de suppression
+    if (showDeleteDialog && competitorToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmer la suppression") },
+            text = {
+                Text("Voulez-vous vraiment supprimer ${competitorToDelete!!.first_name} ${competitorToDelete!!.last_name} ?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // Supprimer le compétiteur via l'API
+                        scope.launch {
+                            try {
+                                ApiClient.apiService.deleteCompetitor(token, competitorToDelete!!.id) // Suppression via l'API
+                                updateCompetitors() // Mise à jour de la liste après suppression
+                                showDeleteDialog = false
+                            } catch (e: Exception) {
+                                println("Erreur lors de la suppression : ${e.message}")
+                            }
+                        }
+                    }
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
-                        Text(text = "Âge: $age ans")
-                        Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+                    Text("Supprimer")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDeleteDialog = false }) { Text("Annuler") }
+            }
+        )
+    }
+
+    // Affichage de la liste des compétiteurs
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        when {
+            competitors == null -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally)) // Si les compétiteurs sont en cours de chargement
+            }
+            competitors!!.isEmpty() -> {
+                Text("Aucun compétiteur trouvé.", modifier = Modifier.align(Alignment.CenterHorizontally)) // Si aucune donnée n'est disponible
+            }
+            else -> {
+                LazyColumn(modifier = Modifier.weight(1f)) { // Donne de l'espace au LazyColumn
+                    items(competitors!!) { competitor ->
+                        val fullName = "${competitor.first_name} ${competitor.last_name}"
+                        val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
+                        // Calculer l'âge
+                        val age = calculateAge(birthDate)
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            elevation = CardDefaults.cardElevation(4.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
+                                Text(text = "Âge: $age ans")
+                                Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+
+                                // Icônes pour modifier et supprimer
+                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                                    IconButton(onClick = {
+                                        competitorToEdit = competitor // Lancer l'édition
+                                        showDialog = true // Afficher le dialog d'édition
+                                    }) {
+                                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Modifier")
+                                    }
+
+                                    IconButton(onClick = {
+                                        competitorToDelete = competitor // Lancer la suppression
+                                        showDeleteDialog = true // Afficher la confirmation de suppression
+                                    }) {
+                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Supprimer")
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp)) // Un espacement entre la liste et le bouton
+
+        // Le bouton "Ajouter un compétiteur"
+        Button(
+            onClick = {
+                competitorToEdit = null
+                showDialog = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Ajouter un compétiteur")
+        }
+    }
+}
+
+
+@Composable
+fun AddCompetitorDialog(
+    token: String,
+    competitor: Competitor? = null, // Si un compétiteur est passé, on le modifie
+    onDismiss: () -> Unit,
+    onCompetitorsUpdated: () -> Unit // Callback pour mettre à jour la liste des compétiteurs
+) {
+    val scope = rememberCoroutineScope()
+
+    // Si nous sommes en mode modification, pré-remplir les champs
+    var firstName by remember { mutableStateOf(competitor?.first_name ?: "") }
+    var lastName by remember { mutableStateOf(competitor?.last_name ?: "") }
+    var email by remember { mutableStateOf(competitor?.email ?: "") }
+    var phone by remember { mutableStateOf(competitor?.phone ?: "") }
+    var gender by remember { mutableStateOf(competitor?.gender ?: "H") }
+    var birthDate by remember { mutableStateOf(competitor?.born_at ?: "") }
+
+    // Reset des valeurs quand la fenêtre est fermée
+    LaunchedEffect(competitor) {
+        if (competitor == null) {
+            // Si aucun compétiteur n'est passé, réinitialiser les champs
+            firstName = ""
+            lastName = ""
+            email = ""
+            phone = ""
+            gender = "H"
+            birthDate = ""
+        }
+    }
+
+    // Variable pour afficher le message d'erreur
+    var errorMessage by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (competitor == null) "Ajouter un compétiteur" else "Modifier un compétiteur") },
+        text = {
+            Column {
+                OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("Prénom") })
+                OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("Nom") })
+                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Téléphone") })
+                OutlinedTextField(value = birthDate, onValueChange = { birthDate = it }, label = { Text("Date de naissance (YYYY-MM-DD)") })
+
+                Text("Genre:")
+                Row {
+                    RadioButton(
+                        selected = gender == "H",
+                        onClick = { gender = "H" }
+                    )
+                    Text("Homme", modifier = Modifier.padding(start = 8.dp))
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(
+                        selected = gender == "F",
+                        onClick = { gender = "F" }
+                    )
+                    Text("Femme", modifier = Modifier.padding(start = 8.dp))
+                }
+
+                // Affichage du message d'erreur si les champs ne sont pas remplis
+                if (errorMessage.isNotEmpty()) {
+                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    // Validation des champs
+                    if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty() || birthDate.isEmpty()) {
+                        errorMessage = "Tous les champs doivent être remplis"
+                    } else {
+                        errorMessage = ""
+
+                        // Créer un nouveau compétiteur sans l'ID
+                        val updatedCompetitor = Competitor(
+                            id = competitor?.id ?: 0, // Si modification, utiliser l'ID existant
+                            first_name = firstName,
+                            last_name = lastName,
+                            email = email,
+                            gender = gender,
+                            phone = phone,
+                            born_at = birthDate
+                        )
+
+                        scope.launch {
+                            try {
+                                if (competitor == null) {
+                                    // Ajout d'un nouveau compétiteur
+                                    ApiClient.apiService.addCompetitor(token, updatedCompetitor)
+
+                                } else {
+                                    // Mise à jour du compétiteur
+                                    ApiClient.apiService.updateCompetitor(token, updatedCompetitor.id, updatedCompetitor)
+                                }
+                                onCompetitorsUpdated() // Mettre à jour la liste des compétiteurs
+                                onDismiss() // Fermer la fenêtre
+
+                            } catch (e: Exception) {
+                                println("Erreur : ${e.message}")
+                            }
+                        }
+                    }
+                }
+            ) {
+                Text(if (competitor == null) "Ajouter" else "Modifier")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
+}
+
+
+
+
+@Composable
+fun CompetitorCard(competitor: Competitor) {
+    val fullName = "${competitor.first_name} ${competitor.last_name}"
+    val age = calculateAge(competitor.born_at)
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Âge: $age ans")
+            Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
         }
     }
 }
@@ -283,41 +561,188 @@ fun CoursesScreen() {
 @Composable
 fun ObstaclesScreen() {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var obstacles by remember { mutableStateOf<List<Obstacles>?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+    var obstacleToEdit by remember { mutableStateOf<Obstacles?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var obstacleToDelete by remember { mutableStateOf<Obstacles?>(null) }
 
-    val obstacles by produceState<List<Obstacles>?>(initialValue = null) {
-        try {
-            val response = ApiClient.apiService.getObstacles(token)
-            value = response
-            println("✅ Réponse API Obstacles: $response")
-        } catch (e: Exception) {
-            value = emptyList()
-            println("❌ Erreur API Obstacles: ${e.message}")
+    val scope = rememberCoroutineScope()
+
+    val updateObstacles = {
+        scope.launch {
+            try {
+                obstacles = ApiClient.apiService.getObstacles(token)
+            } catch (e: Exception) {
+                println("Erreur lors du chargement des obstacles : ${e.message}")
+            }
         }
     }
 
-    when {
-        obstacles == null -> CircularProgressIndicator()
-        obstacles!!.isEmpty() -> Text("Aucun obstacle trouvé")
-        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            items(obstacles!!) { obstacle ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
+    LaunchedEffect(true) {
+        updateObstacles()
+    }
+
+    if (showDialog) {
+        AddObstacleDialog(
+            token = token,
+            obstacle = obstacleToEdit,
+            onDismiss = { showDialog = false },
+            onObstaclesUpdated = {
+                updateObstacles()
+                showDialog = false
+            }
+        )
+    }
+
+    if (showDeleteDialog && obstacleToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmer la suppression") },
+            text = { Text("Voulez-vous vraiment supprimer ${obstacleToDelete!!.name} ?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                ApiClient.apiService.deleteObstacles(token, obstacleToDelete!!.id)
+                                updateObstacles()
+                                showDeleteDialog = false
+                            } catch (e: Exception) {
+                                println("Erreur lors de la suppression : ${e.message}")
+                            }
+                        }
+                    }
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
-                        if (obstacle.picture != null) {
-                            // Ici, on pourrait afficher une image si l'URL est valide
-                            // AsyncImage(model = obstacle.picture, contentDescription = "Image de l'obstacle")
-                        } else {
-                            Text(text = "Aucune image disponible", style = MaterialTheme.typography.bodySmall)
+                    Text("Supprimer")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDeleteDialog = false }) { Text("Annuler") }
+            }
+        )
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        when {
+            obstacles == null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            obstacles!!.isEmpty() -> Text("Aucun obstacle trouvé.", modifier = Modifier.align(Alignment.CenterHorizontally))
+            else -> {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(obstacles!!) { obstacle ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            elevation = CardDefaults.cardElevation(4.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
+
+
+                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                                    IconButton(onClick = {
+                                        obstacleToEdit = obstacle
+                                        showDialog = true
+                                    }) {
+                                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Modifier")
+                                    }
+
+                                    IconButton(onClick = {
+                                        obstacleToDelete = obstacle
+                                        showDeleteDialog = true
+                                    }) {
+                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Supprimer")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                obstacleToEdit = null
+                showDialog = true
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Ajouter un obstacle")
+        }
     }
 }
+
+
+@Composable
+fun AddObstacleDialog(
+    token: String,
+    obstacle: Obstacles? = null,
+    onDismiss: () -> Unit,
+    onObstaclesUpdated: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
+    var name by remember { mutableStateOf(obstacle?.name ?: "") }
+    var errorMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(obstacle) {
+        if (obstacle == null) {
+            name = ""
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (obstacle == null) "Ajouter un obstacle" else "Modifier un obstacle") },
+        text = {
+            Column {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nom") })
+
+                if (errorMessage.isNotEmpty()) {
+                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isEmpty()) {
+                        errorMessage = "Le nom est requis"
+                    } else {
+                        errorMessage = ""
+
+                        val updatedObstacle = Obstacles(
+                            id = obstacle?.id ?: 0,
+                            name = name
+                        )
+
+                        scope.launch {
+                            try {
+                                if (obstacle == null) {
+                                    ApiClient.apiService.addObstacles(token, updatedObstacle)
+                                } else {
+                                    ApiClient.apiService.updateObstacles(token, updatedObstacle.id, updatedObstacle)
+                                }
+                                onObstaclesUpdated()
+                                onDismiss()
+                            } catch (e: Exception) {
+                                println("Erreur : ${e.message}")
+                            }
+                        }
+                    }
+                }
+            ) {
+                Text(if (obstacle == null) "Ajouter" else "Modifier")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
+}
+
 
 @Composable
 fun ArbitragesScreen(){
