@@ -32,6 +32,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import coil.compose.AsyncImage
 
 
 // --- Configuration Retrofit ---
@@ -85,6 +86,12 @@ interface ApiService {
     @GET("obstacles")
     suspend fun getObstacles(@Header("Authorization") token: String): List<Obstacles>
 
+    @POST("obstacles")
+    suspend fun addObstacles(
+        @Header("Authorization") token: String,
+        @Body obstacles: Obstacles
+    ): Obstacles
+
     @POST("competitors")
     suspend fun addCompetitor(
         @Header("Authorization") token: String,
@@ -97,12 +104,26 @@ interface ApiService {
         @Path("id") competitorId: Int
     ): Response<Unit>
 
+    @DELETE("obstacles/{id}")
+    suspend fun deleteObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") obstaclesId: Int
+    ): Response<Unit>
+
     @PUT("competitors/{id}")
     suspend fun updateCompetitor(
         @Header("Authorization") token: String,
         @Path("id") competitorId: Int,
         @Body competitor: Competitor
     ): Competitor
+
+    @PUT("obstacles/{id}")
+    suspend fun updateObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") obstaclesId: Int,
+        @Body obstacles: Obstacles
+    ): Obstacles
+
 }
 
 
@@ -541,41 +562,220 @@ fun CoursesScreen() {
 @Composable
 fun ObstaclesScreen() {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var obstacles by remember { mutableStateOf<List<Obstacles>?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+    var obstacleToEdit by remember { mutableStateOf<Obstacles?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var obstacleToDelete by remember { mutableStateOf<Obstacles?>(null) }
 
-    val obstacles by produceState<List<Obstacles>?>(initialValue = null) {
-        try {
-            val response = ApiClient.apiService.getObstacles(token)
-            value = response
-            println("✅ Réponse API Obstacles: $response")
-        } catch (e: Exception) {
-            value = emptyList()
-            println("❌ Erreur API Obstacles: ${e.message}")
+    val scope = rememberCoroutineScope()
+
+    val updateObstacles = {
+        scope.launch {
+            try {
+                obstacles = ApiClient.apiService.getObstacles(token)
+            } catch (e: Exception) {
+                println("Erreur lors du chargement des obstacles : ${e.message}")
+            }
         }
     }
 
-    when {
-        obstacles == null -> CircularProgressIndicator()
-        obstacles!!.isEmpty() -> Text("Aucun obstacle trouvé")
-        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            items(obstacles!!) { obstacle ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
+    LaunchedEffect(true) {
+        updateObstacles()
+    }
+
+    if (showDialog) {
+        AddObstacleDialog(
+            token = token,
+            obstacle = obstacleToEdit,
+            onDismiss = { showDialog = false },
+            onObstaclesUpdated = {
+                updateObstacles()
+                showDialog = false
+            }
+        )
+    }
+
+    if (showDeleteDialog && obstacleToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmer la suppression") },
+            text = { Text("Voulez-vous vraiment supprimer ${obstacleToDelete!!.name} ?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                ApiClient.apiService.deleteObstacles(token, obstacleToDelete!!.id)
+                                updateObstacles()
+                                showDeleteDialog = false
+                            } catch (e: Exception) {
+                                println("Erreur lors de la suppression : ${e.message}")
+                            }
+                        }
+                    }
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
-                        if (obstacle.picture != null) {
-                            // Ici, on pourrait afficher une image si l'URL est valide
-                            // AsyncImage(model = obstacle.picture, contentDescription = "Image de l'obstacle")
-                        } else {
-                            Text(text = "Aucune image disponible", style = MaterialTheme.typography.bodySmall)
+                    Text("Supprimer")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDeleteDialog = false }) { Text("Annuler") }
+            }
+        )
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        when {
+            obstacles == null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            obstacles!!.isEmpty() -> Text("Aucun obstacle trouvé.", modifier = Modifier.align(Alignment.CenterHorizontally))
+            else -> {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(obstacles!!) { obstacle ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            elevation = CardDefaults.cardElevation(4.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
+                                if (obstacle.picture != null) {
+                                    AsyncImage(
+                                        model = obstacle.picture,
+                                        contentDescription = "Image de l'obstacle",
+                                        modifier = Modifier.size(100.dp)
+                                    )
+                                }else{
+                                    Text(text = "Aucune image disponible", style = MaterialTheme.typography.bodySmall)
+                                }
+
+                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                                    IconButton(onClick = {
+                                        obstacleToEdit = obstacle
+                                        showDialog = true
+                                    }) {
+                                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Modifier")
+                                    }
+
+                                    IconButton(onClick = {
+                                        obstacleToDelete = obstacle
+                                        showDeleteDialog = true
+                                    }) {
+                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Supprimer")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                obstacleToEdit = null
+                showDialog = true
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Ajouter un obstacle")
+        }
     }
 }
+
+@Composable
+fun ObstacleItem(obstacle: Obstacles) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
+
+            obstacle.picture?.let { imageUrl ->
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Image de ${obstacle.name}",
+                    modifier = Modifier.fillMaxWidth().height(150.dp)
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun AddObstacleDialog(
+    token: String,
+    obstacle: Obstacles? = null,
+    onDismiss: () -> Unit,
+    onObstaclesUpdated: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
+    var name by remember { mutableStateOf(obstacle?.name ?: "") }
+    var picture by remember { mutableStateOf(obstacle?.picture ?: "") }
+    var errorMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(obstacle) {
+        if (obstacle == null) {
+            name = ""
+            picture = ""
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (obstacle == null) "Ajouter un obstacle" else "Modifier un obstacle") },
+        text = {
+            Column {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nom") })
+                OutlinedTextField(value = picture, onValueChange = { picture = it }, label = { Text("URL de l'image (optionnel)") })
+
+                if (errorMessage.isNotEmpty()) {
+                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isEmpty()) {
+                        errorMessage = "Le nom est requis"
+                    } else {
+                        errorMessage = ""
+
+                        val updatedObstacle = Obstacles(
+                            id = obstacle?.id ?: 0,
+                            name = name,
+                            picture = if (picture.isNotEmpty()) picture else null
+                        )
+
+                        scope.launch {
+                            try {
+                                if (obstacle == null) {
+                                    ApiClient.apiService.addObstacles(token, updatedObstacle)
+                                } else {
+                                    ApiClient.apiService.updateObstacles(token, updatedObstacle.id, updatedObstacle)
+                                }
+                                onObstaclesUpdated()
+                                onDismiss()
+                            } catch (e: Exception) {
+                                println("Erreur : ${e.message}")
+                            }
+                        }
+                    }
+                }
+            ) {
+                Text(if (obstacle == null) "Ajouter" else "Modifier")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
+}
+
 
 @Composable
 fun ArbitragesScreen(){
