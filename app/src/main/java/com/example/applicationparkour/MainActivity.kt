@@ -69,7 +69,6 @@ data class Courses(
 data class Obstacles(
     val id: Int,
     val name: String,
-    val picture: String?,
 )
 
 // Interface de l'API
@@ -637,15 +636,7 @@ fun ObstaclesScreen() {
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
-                                if (obstacle.picture != null) {
-                                    AsyncImage(
-                                        model = obstacle.picture,
-                                        contentDescription = "Image de l'obstacle",
-                                        modifier = Modifier.size(100.dp)
-                                    )
-                                }else{
-                                    Text(text = "Aucune image disponible", style = MaterialTheme.typography.bodySmall)
-                                }
+
 
                                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                     IconButton(onClick = {
@@ -683,26 +674,6 @@ fun ObstaclesScreen() {
     }
 }
 
-@Composable
-fun ObstacleItem(obstacle: Obstacles) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(8.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
-
-            obstacle.picture?.let { imageUrl ->
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = "Image de ${obstacle.name}",
-                    modifier = Modifier.fillMaxWidth().height(150.dp)
-                )
-            }
-        }
-    }
-}
-
 
 @Composable
 fun AddObstacleDialog(
@@ -714,13 +685,11 @@ fun AddObstacleDialog(
     val scope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf(obstacle?.name ?: "") }
-    var picture by remember { mutableStateOf(obstacle?.picture ?: "") }
     var errorMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(obstacle) {
         if (obstacle == null) {
             name = ""
-            picture = ""
         }
     }
 
@@ -730,7 +699,6 @@ fun AddObstacleDialog(
         text = {
             Column {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nom") })
-                OutlinedTextField(value = picture, onValueChange = { picture = it }, label = { Text("URL de l'image (optionnel)") })
 
                 if (errorMessage.isNotEmpty()) {
                     Text(text = errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -747,8 +715,7 @@ fun AddObstacleDialog(
 
                         val updatedObstacle = Obstacles(
                             id = obstacle?.id ?: 0,
-                            name = name,
-                            picture = if (picture.isNotEmpty()) picture else null
+                            name = name
                         )
 
                         scope.launch {
