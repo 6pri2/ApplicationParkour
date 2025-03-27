@@ -178,11 +178,12 @@ fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
         }
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (currentPage) {
-                0 -> CompetitionScreen()
+                0 -> WelcomeScreen()
                 1 -> CompetitorScreen()
-                2 -> CoursesScreen()
-                3 -> ObstaclesScreen()
-                4 -> ArbitragesScreen()
+                2 -> CompetitionScreen()
+                3 -> CoursesScreen()
+                4 -> ObstaclesScreen()
+                5 -> ArbitragesScreen()
             }
         }
     }
@@ -190,7 +191,7 @@ fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
 
 @Composable
 fun SlidingMenu(setPage: (Int) -> Unit) {
-    val menuItems = listOf("Compétition", "Compétiteur", "Courses", "Obstacles", "Arbitrage")
+    val menuItems = listOf("Acceuil","Compétiteur","Compétition",  "Courses/Parcours", "Obstacles", "Arbitrage")
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Text(text = "Menu")
         Spacer(modifier = Modifier.height(20.dp))
@@ -199,6 +200,16 @@ fun SlidingMenu(setPage: (Int) -> Unit) {
                 Text(title)
             }
         }
+    }
+}
+
+@Composable
+fun WelcomeScreen(){
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = "Lyes au Boulot", style = MaterialTheme.typography.headlineMedium)
     }
 }
 
