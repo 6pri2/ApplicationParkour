@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
@@ -18,6 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.applicationparkour.ui.theme.ApplicationParkourTheme
 import kotlinx.coroutines.launch
 import retrofit2.Response
@@ -147,30 +153,109 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ApplicationParkourTheme {
-                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-                var currentPage by remember { mutableStateOf(0) }
-                val scope = rememberCoroutineScope()
-
-                ModalNavigationDrawer(
-                    drawerState = drawerState,
-                    drawerContent = {
-                        SlidingMenu(setPage = { page ->
-                            currentPage = page
-                            scope.launch { drawerState.close() }
-                        })
-                    }
-                ) {
-                    MainContent(
-                        currentPage = currentPage,
-                        openDrawer = { scope.launch { drawerState.open() } }
-                    )
-                }
+                ParkourApp()
             }
         }
     }
 }
 
 @Composable
+fun ParkourApp() {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = "welcome"
+    ) {
+        composable("welcome") {
+            WelcomeScreen(navController)
+        }
+        composable("competitors") {
+            CompetitorScreen(navController)
+        }
+        composable("competitions") {
+            CompetitionScreen(navController)
+        }
+        composable("courses") {
+            CoursesScreen(navController)
+        }
+        composable("obstacles") {
+            ObstaclesScreen(navController)
+        }
+        composable("arbitrage") {
+            ArbitragesScreen(navController)
+        }
+    }
+}
+
+@Composable
+fun WelcomeScreen(navController: NavController) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Application Parkour",
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.padding(bottom = 48.dp)
+        )
+
+        val buttonModifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .height(60.dp)
+
+        Button(
+            onClick = { navController.navigate("competitors") },
+            modifier = buttonModifier
+        ) {
+            Text("Compétiteurs")
+        }
+
+        Button(
+            onClick = { navController.navigate("competitions") },
+            modifier = buttonModifier
+        ) {
+            Text("Compétitions")
+        }
+
+        // Ajoutez les autres boutons de la même manière
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ScreenScaffold(
+    title: String,
+    navController: NavController,
+    content: @Composable () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            content()
+        }
+    }
+}
+
+/*@Composable
 fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
         IconButton(onClick = { openDrawer() }) {
@@ -211,157 +296,190 @@ fun WelcomeScreen(){
     ) {
         Text(text = "Lyes au Boulot", style = MaterialTheme.typography.headlineMedium)
     }
-}
+}*/
 
 @Composable
-fun CompetitionScreen() {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
-    val competitions by produceState<List<Competition>?>(initialValue = null) {
-        try {
-            val response = ApiClient.apiService.getCompetitions(token)
-            value = response
-            println("✅ Réponse API : $response") // Log dans la console
-        } catch (e: Exception) {
-            value = emptyList()
-            println("❌ Erreur API : ${e.message}") // Log erreur
-        }
-    }
-
-
-    when {
-        competitions == null -> CircularProgressIndicator()
-        competitions!!.isEmpty() -> Text("Aucune compétition trouvée")
-        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            items(competitions!!) { competition ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Nom: ${competition.name}", style = MaterialTheme.typography.bodyLarge)
-                        Text(text = "Âge: ${competition.age_min} - ${competition.age_max} ans")
-                        Text(text = "Genre: ${if (competition.gender == "H") "Homme" else "Femme"}")
-                        Text(text = "Retry: ${if (competition.has_retry == 1) "Oui" else "Non"}")
-                        Text(text = "Statut: ${competition.status}")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CompetitorScreen() {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
-    var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
-    var showDialog by remember { mutableStateOf(false) }
-    var competitorToEdit by remember { mutableStateOf<Competitor?>(null) }  // Pour l'édition
-    var showDeleteDialog by remember { mutableStateOf(false) }  // Pour la confirmation de suppression
-    var competitorToDelete by remember { mutableStateOf<Competitor?>(null) } // Compétiteur à supprimer
-
-    val scope = rememberCoroutineScope()
-
-    // Fonction pour mettre à jour la liste des compétiteurs
-    val updateCompetitors = {
-        scope.launch {
+fun CompetitionScreen(navController: NavController) {
+    ScreenScaffold(
+        title = "Compétition",
+        navController = navController
+    ) {
+        val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+        val competitions by produceState<List<Competition>?>(initialValue = null) {
             try {
-                competitors = ApiClient.apiService.getCompetitors(token)
+                val response = ApiClient.apiService.getCompetitions(token)
+                value = response
+                println("✅ Réponse API : $response") // Log dans la console
             } catch (e: Exception) {
-                println("Erreur lors du chargement des compétiteurs : ${e.message}")
+                value = emptyList()
+                println("❌ Erreur API : ${e.message}") // Log erreur
             }
         }
-    }
 
-    // Charger les compétiteurs au démarrage de l'écran
-    LaunchedEffect(true) {
-        updateCompetitors() // Charger les compétiteurs lorsque l'écran est chargé
-    }
-
-    // Affichage du dialog pour ajouter ou modifier un compétiteur
-    if (showDialog) {
-        AddCompetitorDialog(
-            token = token,
-            competitor = competitorToEdit, // Passer le compétiteur à modifier (null si ajout)
-            onDismiss = { showDialog = false },
-            onCompetitorsUpdated = {
-                updateCompetitors() // Mettre à jour la liste des compétiteurs
-                showDialog = false
-            }
-        )
-    }
-
-    // Affichage du dialog de suppression
-    if (showDeleteDialog && competitorToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Confirmer la suppression") },
-            text = {
-                Text("Voulez-vous vraiment supprimer ${competitorToDelete!!.first_name} ${competitorToDelete!!.last_name} ?")
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        // Supprimer le compétiteur via l'API
-                        scope.launch {
-                            try {
-                                ApiClient.apiService.deleteCompetitor(token, competitorToDelete!!.id) // Suppression via l'API
-                                updateCompetitors() // Mise à jour de la liste après suppression
-                                showDeleteDialog = false
-                            } catch (e: Exception) {
-                                println("Erreur lors de la suppression : ${e.message}")
-                            }
+        when {
+            competitions == null -> CircularProgressIndicator()
+            competitions!!.isEmpty() -> Text("Aucune compétition trouvée")
+            else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                items(competitions!!) { competition ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        elevation = CardDefaults.cardElevation(4.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Nom: ${competition.name}",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(text = "Âge: ${competition.age_min} - ${competition.age_max} ans")
+                            Text(text = "Genre: ${if (competition.gender == "H") "Homme" else "Femme"}")
+                            Text(text = "Retry: ${if (competition.has_retry == 1) "Oui" else "Non"}")
+                            Text(text = "Statut: ${competition.status}")
                         }
                     }
-                ) {
-                    Text("Supprimer")
                 }
-            },
-            dismissButton = {
-                Button(onClick = { showDeleteDialog = false }) { Text("Annuler") }
             }
-        )
+        }
     }
+}
 
-    // Affichage de la liste des compétiteurs
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        when {
-            competitors == null -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally)) // Si les compétiteurs sont en cours de chargement
+@Composable
+fun CompetitorScreen(navController: NavController) {
+    ScreenScaffold(
+        title = "Compétiteurs",
+        navController = navController
+    ) {
+        val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+        var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
+        var showDialog by remember { mutableStateOf(false) }
+        var competitorToEdit by remember { mutableStateOf<Competitor?>(null) }  // Pour l'édition
+        var showDeleteDialog by remember { mutableStateOf(false) }  // Pour la confirmation de suppression
+        var competitorToDelete by remember { mutableStateOf<Competitor?>(null) } // Compétiteur à supprimer
+
+        val scope = rememberCoroutineScope()
+
+        // Fonction pour mettre à jour la liste des compétiteurs
+        val updateCompetitors = {
+            scope.launch {
+                try {
+                    competitors = ApiClient.apiService.getCompetitors(token)
+                } catch (e: Exception) {
+                    println("Erreur lors du chargement des compétiteurs : ${e.message}")
+                }
             }
-            competitors!!.isEmpty() -> {
-                Text("Aucun compétiteur trouvé.", modifier = Modifier.align(Alignment.CenterHorizontally)) // Si aucune donnée n'est disponible
-            }
-            else -> {
-                LazyColumn(modifier = Modifier.weight(1f)) { // Donne de l'espace au LazyColumn
-                    items(competitors!!) { competitor ->
-                        val fullName = "${competitor.first_name} ${competitor.last_name}"
-                        val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
-                        // Calculer l'âge
-                        val age = calculateAge(birthDate)
+        }
 
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
-                                Text(text = "Âge: $age ans")
-                                Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+        // Charger les compétiteurs au démarrage de l'écran
+        LaunchedEffect(true) {
+            updateCompetitors() // Charger les compétiteurs lorsque l'écran est chargé
+        }
 
-                                // Icônes pour modifier et supprimer
-                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                                    IconButton(onClick = {
-                                        competitorToEdit = competitor // Lancer l'édition
-                                        showDialog = true // Afficher le dialog d'édition
-                                    }) {
-                                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Modifier")
-                                    }
+        // Affichage du dialog pour ajouter ou modifier un compétiteur
+        if (showDialog) {
+            AddCompetitorDialog(
+                token = token,
+                competitor = competitorToEdit, // Passer le compétiteur à modifier (null si ajout)
+                onDismiss = { showDialog = false },
+                onCompetitorsUpdated = {
+                    updateCompetitors() // Mettre à jour la liste des compétiteurs
+                    showDialog = false
+                }
+            )
+        }
 
-                                    IconButton(onClick = {
-                                        competitorToDelete = competitor // Lancer la suppression
-                                        showDeleteDialog = true // Afficher la confirmation de suppression
-                                    }) {
-                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Supprimer")
+        // Affichage du dialog de suppression
+        if (showDeleteDialog && competitorToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Confirmer la suppression") },
+                text = {
+                    Text("Voulez-vous vraiment supprimer ${competitorToDelete!!.first_name} ${competitorToDelete!!.last_name} ?")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            // Supprimer le compétiteur via l'API
+                            scope.launch {
+                                try {
+                                    ApiClient.apiService.deleteCompetitor(
+                                        token,
+                                        competitorToDelete!!.id
+                                    ) // Suppression via l'API
+                                    updateCompetitors() // Mise à jour de la liste après suppression
+                                    showDeleteDialog = false
+                                } catch (e: Exception) {
+                                    println("Erreur lors de la suppression : ${e.message}")
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Supprimer")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showDeleteDialog = false }) { Text("Annuler") }
+                }
+            )
+        }
+
+        // Affichage de la liste des compétiteurs
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            when {
+                competitors == null -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally)) // Si les compétiteurs sont en cours de chargement
+                }
+
+                competitors!!.isEmpty() -> {
+                    Text(
+                        "Aucun compétiteur trouvé.",
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) // Si aucune donnée n'est disponible
+                }
+
+                else -> {
+                    LazyColumn(modifier = Modifier.weight(1f)) { // Donne de l'espace au LazyColumn
+                        items(competitors!!) { competitor ->
+                            val fullName = "${competitor.first_name} ${competitor.last_name}"
+                            val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
+                            // Calculer l'âge
+                            val age = calculateAge(birthDate)
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                elevation = CardDefaults.cardElevation(4.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Nom: $fullName",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(text = "Âge: $age ans")
+                                    Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+
+                                    // Icônes pour modifier et supprimer
+                                    Row(
+                                        horizontalArrangement = Arrangement.End,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        IconButton(onClick = {
+                                            competitorToEdit = competitor // Lancer l'édition
+                                            showDialog = true // Afficher le dialog d'édition
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Modifier"
+                                            )
+                                        }
+
+                                        IconButton(onClick = {
+                                            competitorToDelete = competitor // Lancer la suppression
+                                            showDeleteDialog =
+                                                true // Afficher la confirmation de suppression
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Supprimer"
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -369,18 +487,19 @@ fun CompetitorScreen() {
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp)) // Un espacement entre la liste et le bouton
+            Spacer(modifier = Modifier.height(16.dp)) // Un espacement entre la liste et le bouton
 
-        // Le bouton "Ajouter un compétiteur"
-        Button(
-            onClick = {
-                competitorToEdit = null
-                showDialog = true },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Ajouter un compétiteur")
+            // Le bouton "Ajouter un compétiteur"
+            Button(
+                onClick = {
+                    competitorToEdit = null
+                    showDialog = true
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Ajouter un compétiteur")
+            }
         }
     }
 }
@@ -534,34 +653,42 @@ fun calculateAge(bornAt: String): Int {
 
 
 @Composable
-fun CoursesScreen() {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+fun CoursesScreen(navController: NavController) {
+    ScreenScaffold(
+        title = "Courses/Parcours",
+        navController = navController
+    ) {
+        val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
 
-    val courses by produceState<List<Courses>?>(initialValue = null) {
-        try {
-            val response = ApiClient.apiService.getCourses(token)
-            value = response
-            println("✅ Réponse API Courses: $response")
-        } catch (e: Exception) {
-            value = emptyList()
-            println("❌ Erreur API Courses: ${e.message}")
+        val courses by produceState<List<Courses>?>(initialValue = null) {
+            try {
+                val response = ApiClient.apiService.getCourses(token)
+                value = response
+                println("✅ Réponse API Courses: $response")
+            } catch (e: Exception) {
+                value = emptyList()
+                println("❌ Erreur API Courses: ${e.message}")
+            }
         }
-    }
 
-    when {
-        courses == null -> CircularProgressIndicator()
-        courses!!.isEmpty() -> Text("Aucune course trouvée")
-        else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            items(courses!!) { course ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Nom: ${course.name}", style = MaterialTheme.typography.bodyLarge)
-                        Text(text = "Durée max: ${course.max_duration} sec")
-                        Text(text = "Position: ${course.position}")
-                        Text(text = "Terminée: ${if (course.is_over == 1) "Oui" else "Non"}")
+        when {
+            courses == null -> CircularProgressIndicator()
+            courses!!.isEmpty() -> Text("Aucune course trouvée")
+            else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                items(courses!!) { course ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        elevation = CardDefaults.cardElevation(4.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Nom: ${course.name}",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(text = "Durée max: ${course.max_duration} sec")
+                            Text(text = "Position: ${course.position}")
+                            Text(text = "Terminée: ${if (course.is_over == 1) "Oui" else "Non"}")
+                        }
                     }
                 }
             }
@@ -570,98 +697,122 @@ fun CoursesScreen() {
 }
 
 @Composable
-fun ObstaclesScreen() {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
-    var obstacles by remember { mutableStateOf<List<Obstacles>?>(null) }
-    var showDialog by remember { mutableStateOf(false) }
-    var obstacleToEdit by remember { mutableStateOf<Obstacles?>(null) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var obstacleToDelete by remember { mutableStateOf<Obstacles?>(null) }
+fun ObstaclesScreen(navController: NavController) {
+    ScreenScaffold(
+        title = "Obstacles",
+        navController = navController
+    ) {
+        val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+        var obstacles by remember { mutableStateOf<List<Obstacles>?>(null) }
+        var showDialog by remember { mutableStateOf(false) }
+        var obstacleToEdit by remember { mutableStateOf<Obstacles?>(null) }
+        var showDeleteDialog by remember { mutableStateOf(false) }
+        var obstacleToDelete by remember { mutableStateOf<Obstacles?>(null) }
 
-    val scope = rememberCoroutineScope()
+        val scope = rememberCoroutineScope()
 
-    val updateObstacles = {
-        scope.launch {
-            try {
-                obstacles = ApiClient.apiService.getObstacles(token)
-            } catch (e: Exception) {
-                println("Erreur lors du chargement des obstacles : ${e.message}")
+        val updateObstacles = {
+            scope.launch {
+                try {
+                    obstacles = ApiClient.apiService.getObstacles(token)
+                } catch (e: Exception) {
+                    println("Erreur lors du chargement des obstacles : ${e.message}")
+                }
             }
         }
-    }
 
-    LaunchedEffect(true) {
-        updateObstacles()
-    }
+        LaunchedEffect(true) {
+            updateObstacles()
+        }
 
-    if (showDialog) {
-        AddObstacleDialog(
-            token = token,
-            obstacle = obstacleToEdit,
-            onDismiss = { showDialog = false },
-            onObstaclesUpdated = {
-                updateObstacles()
-                showDialog = false
-            }
-        )
-    }
+        if (showDialog) {
+            AddObstacleDialog(
+                token = token,
+                obstacle = obstacleToEdit,
+                onDismiss = { showDialog = false },
+                onObstaclesUpdated = {
+                    updateObstacles()
+                    showDialog = false
+                }
+            )
+        }
 
-    if (showDeleteDialog && obstacleToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Confirmer la suppression") },
-            text = { Text("Voulez-vous vraiment supprimer ${obstacleToDelete!!.name} ?") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            try {
-                                ApiClient.apiService.deleteObstacles(token, obstacleToDelete!!.id)
-                                updateObstacles()
-                                showDeleteDialog = false
-                            } catch (e: Exception) {
-                                println("Erreur lors de la suppression : ${e.message}")
+        if (showDeleteDialog && obstacleToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Confirmer la suppression") },
+                text = { Text("Voulez-vous vraiment supprimer ${obstacleToDelete!!.name} ?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    ApiClient.apiService.deleteObstacles(
+                                        token,
+                                        obstacleToDelete!!.id
+                                    )
+                                    updateObstacles()
+                                    showDeleteDialog = false
+                                } catch (e: Exception) {
+                                    println("Erreur lors de la suppression : ${e.message}")
+                                }
                             }
                         }
+                    ) {
+                        Text("Supprimer")
                     }
-                ) {
-                    Text("Supprimer")
+                },
+                dismissButton = {
+                    Button(onClick = { showDeleteDialog = false }) { Text("Annuler") }
                 }
-            },
-            dismissButton = {
-                Button(onClick = { showDeleteDialog = false }) { Text("Annuler") }
-            }
-        )
-    }
+            )
+        }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        when {
-            obstacles == null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-            obstacles!!.isEmpty() -> Text("Aucun obstacle trouvé.", modifier = Modifier.align(Alignment.CenterHorizontally))
-            else -> {
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(obstacles!!) { obstacle ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(text = "Nom: ${obstacle.name}", style = MaterialTheme.typography.bodyLarge)
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            when {
+                obstacles == null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                obstacles!!.isEmpty() -> Text(
+                    "Aucun obstacle trouvé.",
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+
+                else -> {
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(obstacles!!) { obstacle ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                elevation = CardDefaults.cardElevation(4.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Nom: ${obstacle.name}",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
 
 
-                                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                                    IconButton(onClick = {
-                                        obstacleToEdit = obstacle
-                                        showDialog = true
-                                    }) {
-                                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Modifier")
-                                    }
+                                    Row(
+                                        horizontalArrangement = Arrangement.End,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        IconButton(onClick = {
+                                            obstacleToEdit = obstacle
+                                            showDialog = true
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Modifier"
+                                            )
+                                        }
 
-                                    IconButton(onClick = {
-                                        obstacleToDelete = obstacle
-                                        showDeleteDialog = true
-                                    }) {
-                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Supprimer")
+                                        IconButton(onClick = {
+                                            obstacleToDelete = obstacle
+                                            showDeleteDialog = true
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Supprimer"
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -669,18 +820,18 @@ fun ObstaclesScreen() {
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = {
-                obstacleToEdit = null
-                showDialog = true
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Ajouter un obstacle")
+            Button(
+                onClick = {
+                    obstacleToEdit = null
+                    showDialog = true
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Ajouter un obstacle")
+            }
         }
     }
 }
@@ -756,19 +907,24 @@ fun AddObstacleDialog(
 
 
 @Composable
-fun ArbitragesScreen(){
-   Box(
-       modifier = Modifier.fillMaxSize(),
-       contentAlignment = Alignment.Center
-   ) {
-       Text(text = "À faire", style = MaterialTheme.typography.headlineMedium)
-   }
+fun ArbitragesScreen(navController: NavController){
+    ScreenScaffold(
+        title = "Arbitrage",
+        navController = navController
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "À faire", style = MaterialTheme.typography.headlineMedium)
+        }
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun PreviewApp() {
     ApplicationParkourTheme {
-        MainContent(currentPage = 0, openDrawer = {})
+        ParkourApp()
     }
 }
