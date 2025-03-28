@@ -255,49 +255,6 @@ fun ScreenScaffold(
     }
 }
 
-/*@Composable
-fun MainContent(currentPage: Int, openDrawer: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        IconButton(onClick = { openDrawer() }) {
-            Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
-        }
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            when (currentPage) {
-                0 -> WelcomeScreen()
-                1 -> CompetitorScreen()
-                2 -> CompetitionScreen()
-                3 -> CoursesScreen()
-                4 -> ObstaclesScreen()
-                5 -> ArbitragesScreen()
-            }
-        }
-    }
-}
-
-@Composable
-fun SlidingMenu(setPage: (Int) -> Unit) {
-    val menuItems = listOf("Acceuil","Compétiteur","Compétition",  "Courses/Parcours", "Obstacles", "Arbitrage")
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Text(text = "Menu")
-        Spacer(modifier = Modifier.height(20.dp))
-        menuItems.forEachIndexed { index, title ->
-            TextButton(onClick = { setPage(index) }) {
-                Text(title)
-            }
-        }
-    }
-}
-
-@Composable
-fun WelcomeScreen(){
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = "Lyes au Boulot", style = MaterialTheme.typography.headlineMedium)
-    }
-}*/
-
 @Composable
 fun CompetitionScreen(navController: NavController) {
     ScreenScaffold(
