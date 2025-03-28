@@ -5,19 +5,28 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -39,6 +48,7 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 
 
 // --- Configuration Retrofit ---
@@ -129,6 +139,25 @@ interface ApiService {
         @Body obstacles: Obstacles
     ): Obstacles
 
+    @POST("competitions")
+    suspend fun addCompetition(
+        @Header("Authorization") token: String,
+        @Body competition: Competition
+    ): Competition
+
+    @PUT("competitions/{id}")
+    suspend fun updateCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int,
+        @Body competition: Competition
+    ): Competition
+
+    @DELETE("competitions/{id}")
+    suspend fun deleteCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int
+    ): Response<Unit>
+
 }
 
 
@@ -184,6 +213,20 @@ fun ParkourApp() {
         }
         composable("arbitrage") {
             ArbitragesScreen(navController)
+        }
+        composable("competitors/{competitionId}") { backStackEntry ->
+            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
+            CompetitionCompetitorsScreen(navController, competitionId)
+        }
+
+        composable("results/{competitionId}") { backStackEntry ->
+            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
+            CompetitionResultsScreen(navController, competitionId)
+        }
+
+        composable("arbitrage/{competitionId}") { backStackEntry ->
+            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
+            CompetitionArbitrageScreen(navController, competitionId)
         }
     }
 }
@@ -258,43 +301,493 @@ fun ScreenScaffold(
 @Composable
 fun CompetitionScreen(navController: NavController) {
     ScreenScaffold(
-        title = "Compétition",
+        title = "Compétitions",
         navController = navController
     ) {
         val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
-        val competitions by produceState<List<Competition>?>(initialValue = null) {
-            try {
-                val response = ApiClient.apiService.getCompetitions(token)
-                value = response
-                println("✅ Réponse API : $response") // Log dans la console
-            } catch (e: Exception) {
-                value = emptyList()
-                println("❌ Erreur API : ${e.message}") // Log erreur
+        var competitions by remember { mutableStateOf<List<Competition>?>(null) }
+        var showEditDialog by remember { mutableStateOf(false) }
+        var showDeleteDialog by remember { mutableStateOf(false) }
+        var showAddDialog by remember { mutableStateOf(false) }
+        var selectedCompetition by remember { mutableStateOf<Competition?>(null) }
+        var isLoading by remember { mutableStateOf(false) }
+        var showSuccessMessage by remember { mutableStateOf<String?>(null) }
+        var showErrorMessage by remember { mutableStateOf<String?>(null) }
+
+        val scope = rememberCoroutineScope()
+
+        // Fonction pour charger les compétitions
+        fun loadCompetitions() {
+            scope.launch {
+                isLoading = true
+                try {
+                    competitions = ApiClient.apiService.getCompetitions(token)
+                    isLoading = false
+                } catch (e: Exception) {
+                    isLoading = false
+                    showErrorMessage = "Erreur lors du chargement: ${e.message}"
+                    println(showErrorMessage)
+                }
             }
         }
 
-        when {
-            competitions == null -> CircularProgressIndicator()
-            competitions!!.isEmpty() -> Text("Aucune compétition trouvée")
-            else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                items(competitions!!) { competition ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Nom: ${competition.name}",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(text = "Âge: ${competition.age_min} - ${competition.age_max} ans")
-                            Text(text = "Genre: ${if (competition.gender == "H") "Homme" else "Femme"}")
-                            Text(text = "Retry: ${if (competition.has_retry == 1) "Oui" else "Non"}")
-                            Text(text = "Statut: ${competition.status}")
+        // Chargement initial
+        LaunchedEffect(Unit) {
+            loadCompetitions()
+        }
+
+        // Gestion des messages toast
+        LaunchedEffect(showSuccessMessage, showErrorMessage) {
+            if (showSuccessMessage != null) {
+                delay(3000)
+                showSuccessMessage = null
+            }
+            if (showErrorMessage != null) {
+                delay(5000)
+                showErrorMessage = null
+            }
+        }
+
+        // Dialogue d'ajout/modification
+        if (showEditDialog || showAddDialog) {
+            CompetitionEditDialog(
+                competition = if (showEditDialog) selectedCompetition else null,
+                onDismiss = {
+                    showEditDialog = false
+                    showAddDialog = false
+                },
+                onSave = { updatedCompetition ->
+                    scope.launch {
+                        isLoading = true
+                        try {
+                            if (showEditDialog && selectedCompetition != null) {
+                                ApiClient.apiService.updateCompetition(
+                                    token,
+                                    selectedCompetition!!.id,
+                                    updatedCompetition
+                                )
+                                showSuccessMessage = "Compétition mise à jour avec succès"
+                            } else {
+                                ApiClient.apiService.addCompetition(token, updatedCompetition)
+                                showSuccessMessage = "Compétition ajoutée avec succès"
+                            }
+                            loadCompetitions()
+                        } catch (e: Exception) {
+                            showErrorMessage = "Erreur lors de la sauvegarde: ${e.message}"
+                            println(showErrorMessage)
+                        } finally {
+                            isLoading = false
+                            showEditDialog = false
+                            showAddDialog = false
                         }
                     }
                 }
+            )
+        }
+
+        // Dialogue de suppression
+        if (showDeleteDialog && selectedCompetition != null) {
+            DeleteCompetitionDialog(
+                competition = selectedCompetition!!,
+                onDismiss = { showDeleteDialog = false },
+                onConfirm = {
+                    scope.launch {
+                        isLoading = true
+                        try {
+                            ApiClient.apiService.deleteCompetition(token, selectedCompetition!!.id)
+                            showSuccessMessage = "Compétition supprimée avec succès"
+                            loadCompetitions()
+                        } catch (e: Exception) {
+                            showErrorMessage = "Erreur lors de la suppression: ${e.message}"
+                            println(showErrorMessage)
+                        } finally {
+                            isLoading = false
+                            showDeleteDialog = false
+                        }
+                    }
+                }
+            )
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                when {
+                    isLoading && competitions == null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    competitions == null -> {
+                        // Already handled by isLoading case
+                    }
+                    competitions!!.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Aucune compétition trouvée")
+                        }
+                    }
+                    else -> {
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(competitions!!) { competition ->
+                                CompetitionItem(
+                                    competition = competition,
+                                    onEdit = {
+                                        selectedCompetition = competition
+                                        showEditDialog = true
+                                    },
+                                    onDelete = {
+                                        selectedCompetition = competition
+                                        showDeleteDialog = true
+                                    },
+                                    onCompetitors = {
+                                        navController.navigate("competitors/${competition.id}")
+                                    },
+                                    onResults = {
+                                        navController.navigate("results/${competition.id}")
+                                    },
+                                    onArbitrage = {
+                                        navController.navigate("arbitrage/${competition.id}")
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { showAddDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    enabled = !isLoading
+                ) {
+                    Text("Ajouter une compétition")
+                }
             }
+
+            // Indicateur de chargement pour les opérations
+            if (isLoading && competitions != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            // Messages toast
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+            ) {
+                showSuccessMessage?.let { message ->
+                    Snackbar(
+                        modifier = Modifier.padding(16.dp),
+                        action = {
+                            IconButton(onClick = { showSuccessMessage = null }) {
+                                Icon(Icons.Default.Close, "Fermer")
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                showErrorMessage?.let { message ->
+                    Snackbar(
+                        modifier = Modifier.padding(16.dp),
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        action = {
+                            IconButton(onClick = { showErrorMessage = null }) {
+                                Icon(Icons.Default.Close, "Fermer")
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CompetitionItem(
+    competition: Competition,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onCompetitors: () -> Unit,
+    onResults: () -> Unit,
+    onArbitrage: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Nom: ${competition.name}",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(text = "Âge: ${competition.age_min} - ${competition.age_max} ans")
+            Text(text = "Genre: ${if (competition.gender == "H") "Homme" else "Femme"}")
+            Text(text = "Retry: ${if (competition.has_retry == 1) "Oui" else "Non"}")
+            Text(text = "Statut: ${competition.status}")
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, "Modifier")
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, "Supprimer")
+                }
+                IconButton(onClick = onCompetitors) {
+                    Icon(Icons.Default.Person, "Compétiteurs")
+                }
+                IconButton(onClick = onResults) {
+                    Icon(Icons.Default.Star, "Résultats")
+                }
+                IconButton(onClick = onArbitrage) {
+                    Icon(Icons.Default.Settings, "Arbitrage")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeleteCompetitionDialog(
+    competition: Competition,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirmer la suppression") },
+        text = { Text("Voulez-vous vraiment supprimer ${competition.name} ?") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Supprimer")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
+}
+
+@Composable
+fun CompetitionEditDialog(
+    competition: Competition?,
+    onDismiss: () -> Unit,
+    onSave: (Competition) -> Unit
+) {
+    var name by remember { mutableStateOf(competition?.name ?: "") }
+    var ageMin by remember { mutableStateOf(competition?.age_min?.toString() ?: "") }
+    var ageMax by remember { mutableStateOf(competition?.age_max?.toString() ?: "") }
+    var gender by remember { mutableStateOf(competition?.gender ?: "H") }
+    var hasRetry by remember { mutableStateOf(competition?.has_retry == 1) }
+    var status by remember { mutableStateOf(competition?.status ?: "pending") }
+
+    // Validation
+    val ageMinError = remember(ageMin) {
+        ageMin.toIntOrNull()?.takeIf { it <= 0 }?.let { "L'âge minimum doit être positif" }
+    }
+    val ageMaxError = remember(ageMax, ageMin) {
+        when {
+            ageMax.toIntOrNull() == null -> "Veuillez entrer un nombre valide"
+            ageMax.toInt() <= 0 -> "L'âge maximum doit être positif"
+            ageMin.toIntOrNull()?.let { min -> ageMax.toInt() < min } == true ->
+                "L'âge max doit être ≥ âge min"
+            else -> null
+        }
+    }
+    val nameError = remember(name) {
+        if (name.isBlank()) "Le nom est obligatoire" else null
+    }
+    val isValid = ageMinError == null && ageMaxError == null && nameError == null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (competition == null) "Ajouter une compétition" else "Modifier la compétition") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nom") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = nameError != null,
+                    supportingText = { nameError?.let { Text(it) } }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row {
+                    OutlinedTextField(
+                        value = ageMin,
+                        onValueChange = { if (it.all { c -> c.isDigit() }) ageMin = it },
+                        label = { Text("Âge min") },
+                        modifier = Modifier.weight(1f),
+                        isError = ageMinError != null,
+                        supportingText = { ageMinError?.let { Text(it) } },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            keyboardType = KeyboardType.Number
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = ageMax,
+                        onValueChange = { if (it.all { c -> c.isDigit() }) ageMax = it },
+                        label = { Text("Âge max") },
+                        modifier = Modifier.weight(1f),
+                        isError = ageMaxError != null,
+                        supportingText = { ageMaxError?.let { Text(it) } },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            keyboardType = KeyboardType.Number
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Genre:", style = MaterialTheme.typography.labelLarge)
+                Row {
+                    RadioButton(
+                        selected = gender == "H",
+                        onClick = { gender = "H" }
+                    )
+                    Text("Homme", modifier = Modifier.padding(start = 8.dp))
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(
+                        selected = gender == "F",
+                        onClick = { gender = "F" }
+                    )
+                    Text("Femme", modifier = Modifier.padding(start = 8.dp))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = hasRetry,
+                        onCheckedChange = { hasRetry = it }
+                    )
+                    Text("Possibilité de recommencer")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Statut:", style = MaterialTheme.typography.labelLarge)
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = status == "pending",
+                            onClick = { status = "pending" }
+                        )
+                        Text("En attente", modifier = Modifier.padding(start = 8.dp))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = status == "ongoing",
+                            onClick = { status = "ongoing" }
+                        )
+                        Text("En cours", modifier = Modifier.padding(start = 8.dp))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = status == "completed",
+                            onClick = { status = "completed" }
+                        )
+                        Text("Terminée", modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val updatedCompetition = Competition(
+                        id = competition?.id ?: 0,
+                        name = name,
+                        age_min = ageMin.toIntOrNull() ?: 0,
+                        age_max = ageMax.toIntOrNull() ?: 0,
+                        gender = gender,
+                        has_retry = if (hasRetry) 1 else 0,
+                        status = status
+                    )
+                    onSave(updatedCompetition)
+                },
+                enabled = isValid
+            ) {
+                Text("Enregistrer")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
+}
+
+@Composable
+fun CompetitionCompetitorsScreen(navController: NavController, competitionId: String) {
+    ScreenScaffold(
+        title = "Compétiteurs de la compétition",
+        navController = navController
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Compétiteurs de la compétition: $competitionId")
+        }
+    }
+}
+
+@Composable
+fun CompetitionResultsScreen(navController: NavController, competitionId: String) {
+    ScreenScaffold(
+        title = "Résultats de la compétition",
+        navController = navController
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Résultats de la compétition: $competitionId")
+        }
+    }
+}
+
+@Composable
+fun CompetitionArbitrageScreen(navController: NavController, competitionId: String) {
+    ScreenScaffold(
+        title = "Arbitrage de la compétition",
+        navController = navController
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Arbitrage de la compétition: $competitionId")
         }
     }
 }
