@@ -92,6 +92,12 @@ data class Obstacles(
     val name: String,
 )
 
+data class Inscription(
+    val id: Int,
+    val competitor: Competitor,
+    val competition_id: Int
+)
+
 // Interface de l'API
 interface ApiService {
     @GET("competitions")
@@ -168,6 +174,12 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") competitionId: Int
     ): List<Courses>
+
+    @GET("competitions/{competitionId}/inscriptions")
+    suspend fun getCompetitionInscriptions(
+        @Header("Authorization") token: String,
+        @Path("competitionId") competitionId: Int
+    ): List<Competitor>
 
 }
 
@@ -1022,19 +1034,84 @@ fun ResultScreen(navController: NavController, competitionId: String, courseId: 
     }
 }
 
-// Écran d'arbitrage (à ajouter à votre graphe de navigation)
 @Composable
 fun ArbitrageScreen(navController: NavController, competitionId: String, courseId: String) {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var inscriptions by remember { mutableStateOf<List<Competitor>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    // Chargement des inscriptions de la compétition
+    LaunchedEffect(competitionId) {
+        scope.launch {
+            try {
+                inscriptions = ApiClient.apiService.getCompetitionInscriptions(
+                    token,
+                    competitionId.toInt()
+                )
+                isLoading = false
+            } catch (e: Exception) {
+                error = "Erreur de chargement: ${e.message}"
+                isLoading = false
+            }
+        }
+    }
+
     ScreenScaffold(
         title = "Arbitrage du parcours",
         navController = navController
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Arbitrage du parcours: ${courseId}", style = MaterialTheme.typography.headlineMedium)
-                Text("Compétition: ${competitionId}", style = MaterialTheme.typography.headlineSmall)
-                // Ajoutez ici les fonctionnalités d'arbitrage
+        Box(modifier = Modifier.fillMaxSize()) {
+            when {
+                isLoading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+
+                error != null -> {
+                    Text(
+                        text = error!!,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                inscriptions.isEmpty() -> {
+                    Text("Aucun compétiteur inscrit", modifier = Modifier.align(Alignment.Center))
+                }
+
+                else -> {
+                    LazyColumn(modifier = Modifier.padding(16.dp)) {
+                        items(inscriptions) { inscription ->
+                            CompetiteurArbitrageItem(competitor = inscription)
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+// Le composant CompetiteurArbitrageItem reste identique
+@Composable
+fun CompetiteurArbitrageItem(competitor: Competitor) {
+    val fullName = "${competitor.first_name} ${competitor.last_name}"
+    val age = calculateAge(competitor.born_at)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = fullName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text("Âge: $age ans")
+            Text("Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
         }
     }
 }
