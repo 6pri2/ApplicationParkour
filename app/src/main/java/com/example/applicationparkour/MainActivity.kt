@@ -1,6 +1,8 @@
 package com.example.applicationparkour
 
+import android.annotation.SuppressLint
 import android.graphics.Picture
+import android.icu.text.SimpleDateFormat
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,6 +32,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,7 +57,9 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import coil.compose.AsyncImage
+import com.google.type.Date
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 
 // --- Configuration Retrofit ---
@@ -265,6 +271,17 @@ fun ParkourApp() {
             val competitionId = backStackEntry.arguments?.getString("competitionId") ?: ""
             val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
             ArbitrageScreen(navController, competitionId, courseId)
+        }
+        composable("chronometre/{competitionId}/{courseId}/{competitorId}") { backStackEntry ->
+            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: ""
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+            val competitorId = backStackEntry.arguments?.getString("competitorId") ?: ""
+            ChronometreScreen(
+                navController = navController,
+                competitionId = competitionId,
+                courseId = courseId,
+                competitorId = competitorId
+            )
         }
     }
 }
@@ -1083,7 +1100,12 @@ fun ArbitrageScreen(navController: NavController, competitionId: String, courseI
                 else -> {
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
                         items(inscriptions) { inscription ->
-                            CompetiteurArbitrageItem(competitor = inscription)
+                            CompetiteurArbitrageItem(
+                                competitor = inscription,
+                                navController = navController,
+                                competitionId = competitionId,
+                                courseId = courseId
+                            )
                         }
                     }
                 }
@@ -1094,7 +1116,12 @@ fun ArbitrageScreen(navController: NavController, competitionId: String, courseI
 
 // Le composant CompetiteurArbitrageItem reste identique
 @Composable
-fun CompetiteurArbitrageItem(competitor: Competitor) {
+fun CompetiteurArbitrageItem(
+    competitor: Competitor,
+    navController: NavController,
+    competitionId: String,
+    courseId: String
+) {
     val fullName = "${competitor.first_name} ${competitor.last_name}"
     val age = calculateAge(competitor.born_at)
 
@@ -1104,14 +1131,113 @@ fun CompetiteurArbitrageItem(competitor: Competitor) {
             .padding(8.dp),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = fullName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text("Âge: $age ans")
+                Text("Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+            }
+
+            IconButton(
+                onClick = {
+                    navController.navigate("chronometre/$competitionId/$courseId/${competitor.id}")
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Sports,
+                    contentDescription = "Arbitrage"
+                )
+            }
+        }
+    }
+}
+
+@SuppressLint("UnrememberedMutableState")
+@Composable
+fun ChronometreScreen(
+    navController: NavController,
+    competitionId: String,
+    courseId: String,
+    competitorId: String
+) {
+    var isRunning by remember { mutableStateOf(false) }
+    var timeMillis by remember { mutableStateOf(0L) }
+    var startTime by remember { mutableStateOf(0L) }
+
+    // Format d'affichage MM:SS.T (T = dixièmes de seconde)
+    val formattedTime by derivedStateOf {
+        val totalSeconds = timeMillis / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        val tenths = (timeMillis % 1000) / 100
+        String.format("%02d:%02d.%d", minutes, seconds, tenths)
+    }
+
+    LaunchedEffect(isRunning) {
+        if (isRunning) {
+            startTime = System.currentTimeMillis() - timeMillis
+            while (isRunning) {
+                timeMillis = System.currentTimeMillis() - startTime
+                delay(10) // Rafraîchissement toutes les 10ms
+            }
+        }
+    }
+
+    ScreenScaffold(
+        title = "Chronomètre",
+        navController = navController
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Affichage du temps
             Text(
-                text = fullName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                text = formattedTime,
+                style = MaterialTheme.typography.displayLarge.copy(fontFamily = FontFamily.Monospace),
+                color = MaterialTheme.colorScheme.primary
             )
-            Text("Âge: $age ans")
-            Text("Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Bouton Start/Stop
+            Button(
+                onClick = { isRunning = !isRunning },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.width(200.dp)
+            ) {
+                Text(
+                    if (isRunning) "Arrêter" else "Démarrer",
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Bouton Réinitialiser
+            Button(
+                onClick = {
+                    isRunning = false
+                    timeMillis = 0L
+                },
+                modifier = Modifier.width(200.dp)
+            ) {
+                Text("Réinitialiser", style = MaterialTheme.typography.titleMedium)
+            }
         }
     }
 }
