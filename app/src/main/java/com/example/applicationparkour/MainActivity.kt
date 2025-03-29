@@ -49,6 +49,8 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
+import androidx.compose.material.icons.filled.Sports
+import androidx.compose.material.icons.filled.EmojiEvents
 
 
 // --- Configuration Retrofit ---
@@ -157,6 +159,13 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") competitionId: Int
     ): Response<Unit>
+
+    @GET("competitions/{id}/competitors")
+    suspend fun getCompetitorsByCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: String
+    ): List<Competitor>
+
 
 }
 
@@ -566,10 +575,10 @@ fun CompetitionItem(
                     Icon(Icons.Default.Person, "Compétiteurs")
                 }
                 IconButton(onClick = onResults) {
-                    Icon(Icons.Default.Star, "Résultats")
+                    Icon(Icons.Default.EmojiEvents, contentDescription = "Résultats")
                 }
                 IconButton(onClick = onArbitrage) {
-                    Icon(Icons.Default.Settings, "Arbitrage")
+                    Icon(Icons.Default.Sports, "Arbitrage")
                 }
             }
         }
@@ -758,15 +767,60 @@ fun CompetitionEditDialog(
 
 @Composable
 fun CompetitionCompetitorsScreen(navController: NavController, competitionId: String) {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(competitionId) {
+        try {
+            //competitors = ApiClient.apiService.getCompetitorsByCompetition(token, competitionId)
+            competitors = emptyList()
+            isLoading = false
+        } catch (e: Exception) {
+            error = when {
+                e.localizedMessage?.contains("404") == true -> "Endpoint introuvable !"
+                else -> "Erreur: ${e.localizedMessage}"
+            }
+            isLoading = false
+        }
+    }
+
     ScreenScaffold(
         title = "Compétiteurs de la compétition",
         navController = navController
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Compétiteurs de la compétition: $competitionId")
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isLoading -> CircularProgressIndicator()
+
+                error != null -> Text(
+                    text = error!!,
+                    color = MaterialTheme.colorScheme.error
+                )
+
+                competitors.isNullOrEmpty() -> Text("Aucun compétiteur trouvé")
+
+                else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(competitors!!) { competitor ->
+                        CompetitorCard(
+                            competitor = competitor)
+
+                    }
+                }
+            }
         }
     }
 }
+
+
+
+
 
 @Composable
 fun CompetitionResultsScreen(navController: NavController, competitionId: String) {
