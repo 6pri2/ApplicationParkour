@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -19,9 +20,11 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sports
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -809,14 +812,40 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
     var courses by remember { mutableStateOf<List<Courses>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showSuccessMessage by remember { mutableStateOf<String?>(null) }
+    var showErrorMessage by remember { mutableStateOf<String?>(null) }
 
+    val scope = rememberCoroutineScope()
+
+    // Fonction pour charger les courses
+    fun loadCourses() {
+        scope.launch {
+            isLoading = true
+            try {
+                courses = ApiClient.apiService.getCompetitionCourses(token, competitionId.toInt())
+                isLoading = false
+            } catch (e: Exception) {
+                isLoading = false
+                error = "Erreur de connexion: ${e.message}"
+                showErrorMessage = error
+            }
+        }
+    }
+
+    // Chargement initial
     LaunchedEffect(competitionId) {
-        try {
-            courses = ApiClient.apiService.getCompetitionCourses(token, competitionId.toInt())
-        } catch (e: Exception) {
-            error = "Erreur de connexion: ${e.message}"
-        } finally {
-            isLoading = false
+        loadCourses()
+    }
+
+    // Gestion des messages toast
+    LaunchedEffect(showSuccessMessage, showErrorMessage) {
+        if (showSuccessMessage != null) {
+            delay(3000)
+            showSuccessMessage = null
+        }
+        if (showErrorMessage != null) {
+            delay(5000)
+            showErrorMessage = null
         }
     }
 
@@ -825,36 +854,97 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
         navController = navController
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                error != null -> {
-                    Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                courses.isEmpty() -> {
-                    Text(
-                        text = "Aucun parcours trouvé pour cette compétition",
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(courses) { course ->
-                            CourseItem(
-                                course = course,
-                                competitionId = competitionId,
-                                navController = navController
+            Column(modifier = Modifier.fillMaxSize()) {
+                when {
+                    isLoading && courses.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = error!!,
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
+                    }
+                    courses.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Aucun parcours trouvé pour cette compétition")
+                        }
+                    }
+                    else -> {
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(courses) { course ->
+                                CourseItem(
+                                    course = course,
+                                    competitionId = competitionId,
+                                    navController = navController
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Indicateur de chargement pour les opérations
+            if (isLoading && courses.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            // Messages toast
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+            ) {
+                showSuccessMessage?.let { message ->
+                    Snackbar(
+                        modifier = Modifier.padding(16.dp),
+                        action = {
+                            IconButton(onClick = { showSuccessMessage = null }) {
+                                Icon(Icons.Default.Close, "Fermer")
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                showErrorMessage?.let { message ->
+                    Snackbar(
+                        modifier = Modifier.padding(16.dp),
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        action = {
+                            IconButton(onClick = { showErrorMessage = null }) {
+                                Icon(Icons.Default.Close, "Fermer")
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
                     }
                 }
             }
@@ -871,52 +961,44 @@ private fun CourseItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = course.name,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                text = "Nom: ${course.name}",
+                style = MaterialTheme.typography.bodyLarge,
             )
 
-            Text(
-                text = "Statut: ${if (course.is_over == 1) "Terminé" else "En cours"}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
+            Text(text = "Durée max: ${course.max_duration} sec")
+            Text(text = "Position: ${course.position}")
+            Text(text = "Statut: ${if (course.is_over == 1) "Terminé" else "En cours"}")
             Row(
+                horizontalArrangement = Arrangement.End,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Button(
+                IconButton(
                     onClick = {
                         navController.navigate("resultScreen/${competitionId}/${course.id}")
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Star,
+                        imageVector = Icons.Default.EmojiEvents,
                         contentDescription = "Résultats"
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Résultats")
                 }
-
-                Button(
+                IconButton(
                     onClick = {
                         navController.navigate("arbitrageScreen/${competitionId}/${course.id}")
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Build,
+                        imageVector = Icons.Default.Sports,
                         contentDescription = "Arbitrage"
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Arbitrage")
                 }
             }
         }
@@ -932,8 +1014,8 @@ fun ResultScreen(navController: NavController, competitionId: String, courseId: 
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Résultat du parcours: [Nom du parcours]", style = MaterialTheme.typography.headlineMedium)
-                Text("Compétition: [Nom de la compétition]", style = MaterialTheme.typography.headlineSmall)
+                Text("Résultat du parcours: ${courseId}", style = MaterialTheme.typography.headlineMedium)
+                Text("Compétition: ${competitionId}", style = MaterialTheme.typography.headlineSmall)
                 // Ajoutez ici les détails des résultats
             }
         }
@@ -949,8 +1031,8 @@ fun ArbitrageScreen(navController: NavController, competitionId: String, courseI
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Arbitrage du parcours: [Nom du parcours]", style = MaterialTheme.typography.headlineMedium)
-                Text("Compétition: [Nom de la compétition]", style = MaterialTheme.typography.headlineSmall)
+                Text("Arbitrage du parcours: ${courseId}", style = MaterialTheme.typography.headlineMedium)
+                Text("Compétition: ${competitionId}", style = MaterialTheme.typography.headlineSmall)
                 // Ajoutez ici les fonctionnalités d'arbitrage
             }
         }
