@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -716,7 +717,7 @@ fun CompetitionEditDialog(
     competition: Competition?,
     onDismiss: () -> Unit,
     onSave: (Competition) -> Unit,
-    onManageCourses : () -> Unit
+    onManageCourses: () -> Unit
 ) {
     var name by remember { mutableStateOf(competition?.name ?: "") }
     var ageMin by remember { mutableStateOf(competition?.age_min?.toString() ?: "") }
@@ -724,7 +725,8 @@ fun CompetitionEditDialog(
     var gender by remember { mutableStateOf(competition?.gender ?: "H") }
     var hasRetry by remember { mutableStateOf(competition?.has_retry == 1) }
     var status by remember { mutableStateOf(competition?.status ?: "pending") }
-
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    val scope = rememberCoroutineScope()
     // Validation
     val ageMinError = remember(ageMin) {
         ageMin.toIntOrNull()?.takeIf { it <= 0 }?.let { "L'âge minimum doit être positif" }
@@ -747,7 +749,11 @@ fun CompetitionEditDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (competition == null) "Ajouter une compétition" else "Modifier la compétition") },
         text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Nom
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -757,67 +763,67 @@ fun CompetitionEditDialog(
                     supportingText = { nameError?.let { Text(it) } }
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row {
+                // Âges
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = ageMin,
                         onValueChange = { if (it.all { c -> c.isDigit() }) ageMin = it },
                         label = { Text("Âge min") },
                         modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = ageMinError != null,
-                        supportingText = { ageMinError?.let { Text(it) } },
-                        keyboardOptions = KeyboardOptions.Default.copy(
-                            keyboardType = KeyboardType.Number
-                        )
+                        supportingText = { ageMinError?.let { Text(it) } }
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+
                     OutlinedTextField(
                         value = ageMax,
                         onValueChange = { if (it.all { c -> c.isDigit() }) ageMax = it },
                         label = { Text("Âge max") },
                         modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = ageMaxError != null,
-                        supportingText = { ageMaxError?.let { Text(it) } },
-                        keyboardOptions = KeyboardOptions.Default.copy(
-                            keyboardType = KeyboardType.Number
+                        supportingText = { ageMaxError?.let { Text(it) } }
+                    )
+                }
+
+                // Genre
+                Text("Genre:", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = gender == "H",
+                            onClick = { gender = "H" }
                         )
-                    )
+                        Text("Homme", modifier = Modifier.padding(start = 4.dp))
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = gender == "F",
+                            onClick = { gender = "F" }
+                        )
+                        Text("Femme", modifier = Modifier.padding(start = 4.dp))
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("Genre:", style = MaterialTheme.typography.labelLarge)
-                Row {
-                    RadioButton(
-                        selected = gender == "H",
-                        onClick = { gender = "H" }
-                    )
-                    Text("Homme", modifier = Modifier.padding(start = 8.dp))
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    RadioButton(
-                        selected = gender == "F",
-                        onClick = { gender = "F" }
-                    )
-                    Text("Femme", modifier = Modifier.padding(start = 8.dp))
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+                // Recommencer
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = hasRetry,
                         onCheckedChange = { hasRetry = it }
                     )
-                    Text("Possibilité de recommencer")
+                    Text("Possibilité de recommencer", modifier = Modifier.padding(start = 4.dp))
                 }
             }
         },
         confirmButton = {
-            Column {
-                // Nouveau bouton "Modifier les parcours" (seulement en mode édition)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 if (competition != null) {
                     Button(
                         onClick = {
@@ -830,36 +836,62 @@ fun CompetitionEditDialog(
                         Spacer(Modifier.width(8.dp))
                         Text("Modifier les parcours")
                     }
-                    Spacer(Modifier.height(8.dp))
                 }
 
-                // Bouton Enregistrer
                 Button(
                     onClick = {
                         val updatedCompetition = Competition(
                             id = competition?.id ?: 0,
-                            name = name,
+                            name = name.trim(),
                             age_min = ageMin.toIntOrNull() ?: 0,
                             age_max = ageMax.toIntOrNull() ?: 0,
                             gender = gender,
                             has_retry = if (hasRetry) 1 else 0,
-                            status = status
+                            status = competition?.status ?: "pending"
                         )
-                        onSave(updatedCompetition)
+
+                        // Debug
+                        println("Données envoyées: $updatedCompetition")
+
+                        scope.launch {
+                            try {
+                                if (competition == null) {
+                                    val response = ApiClient.apiService.addCompetition(token, updatedCompetition)
+                                    println("Réponse: $response")
+                                } else {
+                                    val response = ApiClient.apiService.updateCompetition(
+                                        token,
+                                        competition.id,
+                                        updatedCompetition
+                                    )
+                                    println("Réponse: $response")
+                                }
+                                onSave(updatedCompetition)
+                            } catch (e: retrofit2.HttpException) {
+                                val errorBody = e.response()?.errorBody()?.string()
+                                println("Erreur 422: $errorBody")
+                                // Affichez un message à l'utilisateur
+                            } catch (e: Exception) {
+                                println("Autre erreur: ${e.message}")
+                            }
+                        }
                     },
                     enabled = isValid,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Enregistrer")
                 }
-            }
-        },
-        dismissButton = {
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Annuler")
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Text("Annuler")
+                }
             }
         }
     )
