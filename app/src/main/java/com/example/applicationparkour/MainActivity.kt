@@ -54,6 +54,11 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
+import androidx.compose.material.icons.filled.Sports
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.ui.graphics.Color
+import com.google.gson.annotations.SerializedName
 
 
 // --- Configuration Retrofit ---
@@ -163,6 +168,37 @@ interface ApiService {
         @Path("id") competitionId: Int
     ): Response<Unit>
 
+    @GET("competitions/{id}/inscriptions")
+    suspend fun getCompetitorsByCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int
+    ): List<Competitor>
+
+        @DELETE("competitions/{id}/remove_competitor/{id_competitor}")
+        suspend fun removeCompetitorFromCompetition(
+            @Header("Authorization") token: String,
+            @Path("id") competitionId: Int,
+            @Path("id_competitor") competitorId: Int
+        ): Response<Unit>
+
+    @POST("competitions/{id}/add_competitor")
+    suspend fun addCompetitorToCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int,
+        @Body competitorId: AddCompetitorRequest
+    ): Response<Unit>
+
+    @GET("competitions/{id}")
+    suspend fun getCompetitionDetails(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int
+    ): Competition
+
+    @GET("competitors")
+    suspend fun getAllCompetitors(
+        @Header("Authorization") token: String
+    ): List<Competitor>
+
     @GET("competitions/{id}/courses")
     suspend fun getCompetitionCourses(
         @Header("Authorization") token: String,
@@ -170,6 +206,10 @@ interface ApiService {
     ): List<Courses>
 
 }
+data class AddCompetitorRequest(
+    @SerializedName("competitor_id")
+    val competitorId: Int
+)
 
 
 // Objet singleton pour créer l'instance Retrofit
@@ -592,10 +632,10 @@ fun CompetitionItem(
                     Icon(Icons.Default.Person, "Compétiteurs")
                 }
                 IconButton(onClick = onResults) {
-                    Icon(Icons.Default.Star, "Résultats")
+                    Icon(Icons.Default.EmojiEvents, contentDescription = "Résultats")
                 }
                 IconButton(onClick = onArbitrage) {
-                    Icon(Icons.Default.Settings, "Arbitrage")
+                    Icon(Icons.Default.Sports, "Arbitrage")
                 }
             }
         }
@@ -784,15 +824,239 @@ fun CompetitionEditDialog(
 
 @Composable
 fun CompetitionCompetitorsScreen(navController: NavController, competitionId: String) {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
+    var allCompetitors by remember { mutableStateOf<List<Competitor>?>(null) }
+    var competition by remember { mutableStateOf<Competition?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var competitorToDelete by remember { mutableStateOf<Competitor?>(null) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var selectedCompetitors by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Chargement initial des données
+    LaunchedEffect(competitionId) {
+        try {
+            val compId = competitionId.toInt()
+            competition = ApiClient.apiService.getCompetitionDetails(token, compId)
+            competitors = ApiClient.apiService.getCompetitorsByCompetition(token, compId)
+            allCompetitors = ApiClient.apiService.getAllCompetitors(token)
+            isLoading = false
+        } catch (e: Exception) {
+            error = "Erreur lors du chargement: ${e.localizedMessage}"
+            isLoading = false
+        }
+    }
+
+    // Filtrer les compétiteurs éligibles
+    val eligibleCompetitors = allCompetitors?.filter { competitor ->
+        val age = calculateAge(competitor.born_at)
+        val genderMatch = competition?.gender == "Tous" || competitor.gender == competition?.gender
+        val ageMatch = age in (competition?.age_min ?: 0)..(competition?.age_max ?: 100)
+        val notRegistered = competitors?.none { it.id == competitor.id } ?: true
+
+        genderMatch && ageMatch && notRegistered
+    }
+
+    // Boîte de dialogue de confirmation de suppression
+    if (competitorToDelete != null) {
+        val competitor = competitorToDelete!!
+        AlertDialog(
+            onDismissRequest = { competitorToDelete = null },
+            title = { Text("Confirmer la retrait du compétiteur dans la compétition ?") },
+            text = { Text("Voulez-vous vraiment supprimer ${competitor.first_name} ${competitor.last_name} ?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            try {
+                                ApiClient.apiService.removeCompetitorFromCompetition(
+                                    token,
+                                    competitionId.toInt(),
+                                    competitor.id
+                                )
+                                competitors = competitors?.filter { it.id != competitor.id }
+                            } catch (e: Exception) {
+                                error = "Erreur lors de la suppression: ${e.localizedMessage}"
+                            } finally {
+                                competitorToDelete = null
+                            }
+                        }
+                    }
+                ) {
+                    Text("Supprimer")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { competitorToDelete = null }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    // Boîte de dialogue pour ajouter des compétiteurs
+    if (showAddDialog && eligibleCompetitors != null) {
+        AlertDialog(
+            onDismissRequest = {
+                selectedCompetitors = emptySet()
+                showAddDialog = false
+            },
+            title = { Text("Ajouter des compétiteurs") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    eligibleCompetitors.forEach { competitor ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(4.dp)
+                        ) {
+                            Checkbox(
+                                checked = selectedCompetitors.contains(competitor.id),
+                                onCheckedChange = { checked ->
+                                    selectedCompetitors = if (checked) {
+                                        selectedCompetitors + competitor.id
+                                    } else {
+                                        selectedCompetitors - competitor.id
+                                    }
+                                }
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("${competitor.last_name} ${competitor.first_name}")
+                                Text(
+                                    "Âge: ${calculateAge(competitor.born_at)} ans",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            try {
+                                // Créer une nouvelle liste avec les nouveaux compétiteurs en premier
+                                val newCompetitors = mutableListOf<Competitor>()
+
+                                selectedCompetitors.forEach { competitorId ->
+                                    val response = ApiClient.apiService.addCompetitorToCompetition(
+                                        token,
+                                        competitionId.toInt(),
+                                        AddCompetitorRequest(competitorId)
+                                    )
+
+                                    if (response.isSuccessful) {
+                                        // Trouver le compétiteur dans allCompetitors et l'ajouter en tête
+                                        allCompetitors?.find { it.id == competitorId }?.let { newCompetitor ->
+                                            newCompetitors.add(newCompetitor)
+                                        }
+                                    }
+                                }
+
+                                // Mettre à jour la liste avec les nouveaux en premier
+                                competitors = newCompetitors + (competitors ?: emptyList())
+
+                                selectedCompetitors = emptySet()
+                                showAddDialog = false
+                            } catch (e: Exception) {
+                                error = "Erreur critique: ${e.localizedMessage}"
+                            }
+                        }
+                    },
+                    enabled = selectedCompetitors.isNotEmpty()
+                ) {
+                    Text("Ajouter (${selectedCompetitors.size})")
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    selectedCompetitors = emptySet()
+                    showAddDialog = false
+                }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
     ScreenScaffold(
         title = "Compétiteurs de la compétition",
         navController = navController
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Compétiteurs de la compétition: $competitionId")
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isLoading -> CircularProgressIndicator()
+                error != null -> Text(
+                    text = error!!,
+                    color = MaterialTheme.colorScheme.error
+                )
+                competitors.isNullOrEmpty() -> Text("Aucun compétiteur trouvé")
+                else -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            items(competitors!!) { competitor ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    elevation = CardDefaults.cardElevation(4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(16.dp)
+                                        ) {
+                                            Text("Nom: ${competitor.last_name}")
+                                            Text("Prénom: ${competitor.first_name}")
+                                            Text("Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+                                        }
+
+                                        IconButton(
+                                            onClick = { competitorToDelete = competitor }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Remove,
+                                                contentDescription = "Retirer de la compétition",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Button(
+                            onClick = { showAddDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            enabled = !isLoading
+                        ) {
+                            Text("Ajouter un compétiteur")
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+
+
+
 
 @Composable
 fun CompetitionResultsScreen(navController: NavController, competitionId: String) {
@@ -1136,11 +1400,17 @@ fun CompetitorScreen(navController: NavController) {
 
                 else -> {
                     LazyColumn(modifier = Modifier.weight(1f)) { // Donne de l'espace au LazyColumn
-                        items(competitors!!) { competitor ->
+                        items(competitors!!.sortedByDescending {
+                            // Vous pourriez utiliser une date d'ajout si disponible
+                            // Ici on utilise simplement l'ordre d'ajout dans la liste
+                            competitors!!.indexOf(it)
+                        }) { competitor ->
+                            
                             val fullName = "${competitor.first_name} ${competitor.last_name}"
                             val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
                             // Calculer l'âge
                             val age = calculateAge(birthDate)
+
 
                             Card(
                                 modifier = Modifier
