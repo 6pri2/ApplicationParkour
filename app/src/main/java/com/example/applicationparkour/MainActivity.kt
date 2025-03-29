@@ -1,10 +1,15 @@
 package com.example.applicationparkour
 
 import android.graphics.Picture
+import android.os.Build
 import android.os.Bundle
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -268,8 +273,19 @@ fun WelcomeScreen(navController: NavController) {
     ) {
         Text(
             text = "Application Parkour",
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(bottom = 48.dp)
+            style = MaterialTheme.typography.headlineLarge.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        Image(
+            painter = painterResource(id = R.mipmap.ic_launcher_adaptive_fore), // Assurez-vous que l'image est dans res/drawable
+            contentDescription = "Logo de l'application",
+            modifier = Modifier
+                .size(346.dp)
+                .padding(bottom = 24.dp)
         )
 
         val buttonModifier = Modifier
@@ -279,19 +295,23 @@ fun WelcomeScreen(navController: NavController) {
 
         Button(
             onClick = { navController.navigate("competitors") },
-            modifier = buttonModifier
+            modifier = buttonModifier,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text("Compétiteurs")
+            Icon(Icons.Default.Person, contentDescription = "Compétiteurs", tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Compétiteurs", color = Color.White)
         }
 
         Button(
             onClick = { navController.navigate("competitions") },
-            modifier = buttonModifier
+            modifier = buttonModifier,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
-            Text("Compétitions")
+            Icon(Icons.Default.EmojiEvents, contentDescription = "Compétitions", tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Compétitions", color = Color.White)
         }
-
-        // Ajoutez les autres boutons de la même manière
     }
 }
 
@@ -1344,6 +1364,7 @@ fun CompetitorCard(competitor: Competitor) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun calculateAge(bornAt: String): Int {
     // Convertir la date de naissance en LocalDate
     val birthDate = LocalDate.parse(bornAt)
