@@ -334,7 +334,9 @@ fun ParkourApp() {
 
         composable("competitionCourses/{competitionId}") { backStackEntry ->
             val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
-            CompetitionCoursesScreen(navController, competitionId)
+            CompetitionCoursesScreen(navController, competitionId, onFinalSave = {
+                navController.popBackStack()
+            })
         }
     }
 }
@@ -434,7 +436,22 @@ fun CompetitionScreen(navController: NavController) {
                 } catch (e: Exception) {
                     isLoading = false
                     showErrorMessage = "Erreur lors du chargement: ${e.message}"
-                    println(showErrorMessage)
+                }
+            }
+        }
+
+        fun createCompetitionAndManageCourses(baseCompetition: Competition) {
+            scope.launch {
+                isLoading = true
+                try {
+                    val createdCompetition = ApiClient.apiService.addCompetition(token, baseCompetition)
+                    showSuccessMessage = "Compétition créée"
+                    navController.navigate("competitionCourses/${createdCompetition.id}")
+                } catch (e: Exception) {
+                    showErrorMessage = "Erreur création: ${e.message}"
+                } finally {
+                    isLoading = false
+                    showAddDialog = false
                 }
             }
         }
@@ -456,49 +473,45 @@ fun CompetitionScreen(navController: NavController) {
             }
         }
 
-        // Dialogue d'ajout/modification
-        if (showEditDialog || showAddDialog) {
+
+        if (showEditDialog && selectedCompetition != null) {
             CompetitionEditDialog(
-                competition = if (showEditDialog) selectedCompetition else null,
-                onDismiss = {
-                    showEditDialog = false
-                    showAddDialog = false
-                },
+                competition = selectedCompetition,
+                onDismiss = { showEditDialog = false },
                 onSave = { updatedCompetition ->
                     scope.launch {
                         isLoading = true
                         try {
-                            if (showEditDialog && selectedCompetition != null) {
-                                ApiClient.apiService.updateCompetition(
-                                    token,
-                                    selectedCompetition!!.id,
-                                    updatedCompetition
-                                )
-                                showSuccessMessage = "Compétition mise à jour avec succès"
-                            } else {
-                                ApiClient.apiService.addCompetition(token, updatedCompetition)
-                                showSuccessMessage = "Compétition ajoutée avec succès"
-                            }
+                            ApiClient.apiService.updateCompetition(
+                                token,
+                                selectedCompetition!!.id,
+                                updatedCompetition
+                            )
+                            showSuccessMessage = "Compétition mise à jour"
                             loadCompetitions()
                         } catch (e: Exception) {
-                            showErrorMessage = "Erreur lors de la sauvegarde: ${e.message}"
-                            println(showErrorMessage)
+                            showErrorMessage = "Erreur mise à jour: ${e.message}"
                         } finally {
                             isLoading = false
                             showEditDialog = false
-                            showAddDialog = false
                         }
                     }
                 },
                 onManageCourses = {
-                    selectedCompetition?.id?.let{ id ->
-                        navController.navigate("competitionCourses/$id")
-                    }
+                    navController.navigate("competitionCourses/${selectedCompetition!!.id}")
                 }
             )
         }
 
-        // Dialogue de suppression
+        if (showAddDialog) {
+            CompetitionEditDialog(
+                competition = null,
+                onDismiss = { showAddDialog = false },
+                onSave = ::createCompetitionAndManageCourses,
+                onManageCourses = {} // Pas utilisé en création
+            )
+        }
+
         if (showDeleteDialog && selectedCompetition != null) {
             DeleteCompetitionDialog(
                 competition = selectedCompetition!!,
@@ -508,11 +521,10 @@ fun CompetitionScreen(navController: NavController) {
                         isLoading = true
                         try {
                             ApiClient.apiService.deleteCompetition(token, selectedCompetition!!.id)
-                            showSuccessMessage = "Compétition supprimée avec succès"
+                            showSuccessMessage = "Compétition supprimée"
                             loadCompetitions()
                         } catch (e: Exception) {
-                            showErrorMessage = "Erreur lors de la suppression: ${e.message}"
-                            println(showErrorMessage)
+                            showErrorMessage = "Erreur suppression: ${e.message}"
                         } finally {
                             isLoading = false
                             showDeleteDialog = false
@@ -522,29 +534,31 @@ fun CompetitionScreen(navController: NavController) {
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                when {
-                    isLoading && competitions == null -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
+        Box(modifier = Modifier
+            .fillMaxSize()) {
+
+            when {
+                isLoading && competitions == null -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
-                    competitions == null -> {
-                        // Already handled by isLoading case
-                    }
-                    competitions!!.isEmpty() -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                }
+                competitions.isNullOrEmpty() -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Aucune compétition trouvée")
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            ) {
+                                Text("Créer une compétition")
+                            }
                         }
                     }
-                    else -> {
+                }
+                else -> {
+                    Column(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(modifier = Modifier.weight(1f)) {
                             items(competitions!!) { competition ->
                                 CompetitionItem(
@@ -565,27 +579,27 @@ fun CompetitionScreen(navController: NavController) {
                                     },
                                     onArbitrage = {
                                         navController.navigate("arbitrage/${competition.id}")
+                                    },
+                                    onCourses = {
+                                        navController.navigate("competitionCourses/${competition.id}")
                                     }
                                 )
                             }
                         }
+
+                        Button(
+                            onClick = { showAddDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            enabled = !isLoading
+                        ) {
+                            Text("Ajouter une compétition")
+                        }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { showAddDialog = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    enabled = !isLoading
-                ) {
-                    Text("Ajouter une compétition")
                 }
             }
 
-            // Indicateur de chargement pour les opérations
             if (isLoading && competitions != null) {
                 Box(
                     modifier = Modifier
@@ -597,48 +611,25 @@ fun CompetitionScreen(navController: NavController) {
                 }
             }
 
-            // Messages toast
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp)
-            ) {
+            Box(Modifier.align(Alignment.BottomCenter)) {
                 showSuccessMessage?.let { message ->
                     Snackbar(
                         modifier = Modifier.padding(16.dp),
-                        action = {
-                            IconButton(onClick = { showSuccessMessage = null }) {
-                                Icon(Icons.Default.Close, "Fermer")
-                            }
-                        }
-                    ) {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
+                        action = { IconButton({ showSuccessMessage = null }) { Icon(Icons.Default.Close, "Fermer") } }
+                    ) { Text(message, color = MaterialTheme.colorScheme.onPrimaryContainer) }
                 }
-
                 showErrorMessage?.let { message ->
                     Snackbar(
                         modifier = Modifier.padding(16.dp),
                         containerColor = MaterialTheme.colorScheme.errorContainer,
-                        action = {
-                            IconButton(onClick = { showErrorMessage = null }) {
-                                Icon(Icons.Default.Close, "Fermer")
-                            }
-                        }
-                    ) {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
+                        action = { IconButton({ showErrorMessage = null }) { Icon(Icons.Default.Close, "Fermer") } }
+                    ) { Text(message, color = MaterialTheme.colorScheme.onErrorContainer) }
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun CompetitionItem(
@@ -647,7 +638,8 @@ fun CompetitionItem(
     onDelete: () -> Unit,
     onCompetitors: () -> Unit,
     onResults: () -> Unit,
-    onArbitrage: () -> Unit
+    onArbitrage: () -> Unit,
+    onCourses: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -824,73 +816,99 @@ fun CompetitionEditDialog(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (competition != null) {
+                if (competition == null){
                     Button(
                         onClick = {
-                            onDismiss()
-                            onManageCourses()
+                            val newCompetition = Competition(
+                                id = 0,
+                                name = name.trim(),
+                                age_min = ageMin.toIntOrNull() ?: 0,
+                                age_max = ageMax.toIntOrNull() ?: 0,
+                                gender = gender,
+                                has_retry = if (hasRetry) 1 else 0,
+                                status = "pending"
+                            )
+                            onSave(newCompetition)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isValid
                     ) {
-                        Icon(Icons.Default.Sports, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Modifier les parcours")
+                        Text("Créer et gérer les parcours")
                     }
                 }
+                else {
 
-                Button(
-                    onClick = {
-                        val updatedCompetition = Competition(
-                            id = competition?.id ?: 0,
-                            name = name.trim(),
-                            age_min = ageMin.toIntOrNull() ?: 0,
-                            age_max = ageMax.toIntOrNull() ?: 0,
-                            gender = gender,
-                            has_retry = if (hasRetry) 1 else 0,
-                            status = competition?.status ?: "pending"
-                        )
-
-                        // Debug
-                        println("Données envoyées: $updatedCompetition")
-
-                        scope.launch {
-                            try {
-                                if (competition == null) {
-                                    val response = ApiClient.apiService.addCompetition(token, updatedCompetition)
-                                    println("Réponse: $response")
-                                } else {
-                                    val response = ApiClient.apiService.updateCompetition(
-                                        token,
-                                        competition.id,
-                                        updatedCompetition
-                                    )
-                                    println("Réponse: $response")
-                                }
-                                onSave(updatedCompetition)
-                            } catch (e: retrofit2.HttpException) {
-                                val errorBody = e.response()?.errorBody()?.string()
-                                println("Erreur 422: $errorBody")
-                                // Affichez un message à l'utilisateur
-                            } catch (e: Exception) {
-                                println("Autre erreur: ${e.message}")
-                            }
+                    if (competition != null) {
+                        Button(
+                            onClick = {
+                                onDismiss()
+                                onManageCourses()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Sports, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Modifier les parcours")
                         }
-                    },
-                    enabled = isValid,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Enregistrer")
-                }
+                    }
 
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                ) {
-                    Text("Annuler")
+                    Button(
+                        onClick = {
+                            val updatedCompetition = Competition(
+                                id = competition?.id ?: 0,
+                                name = name.trim(),
+                                age_min = ageMin.toIntOrNull() ?: 0,
+                                age_max = ageMax.toIntOrNull() ?: 0,
+                                gender = gender,
+                                has_retry = if (hasRetry) 1 else 0,
+                                status = competition?.status ?: "pending"
+                            )
+
+                            // Debug
+                            println("Données envoyées: $updatedCompetition")
+
+                            scope.launch {
+                                try {
+                                    if (competition == null) {
+                                        val response = ApiClient.apiService.addCompetition(
+                                            token,
+                                            updatedCompetition
+                                        )
+                                        println("Réponse: $response")
+                                    } else {
+                                        val response = ApiClient.apiService.updateCompetition(
+                                            token,
+                                            competition.id,
+                                            updatedCompetition
+                                        )
+                                        println("Réponse: $response")
+                                    }
+                                    onSave(updatedCompetition)
+                                } catch (e: retrofit2.HttpException) {
+                                    val errorBody = e.response()?.errorBody()?.string()
+                                    println("Erreur 422: $errorBody")
+                                    // Affichez un message à l'utilisateur
+                                } catch (e: Exception) {
+                                    println("Autre erreur: ${e.message}")
+                                }
+                            }
+                        },
+                        enabled = isValid,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Enregistrer")
+                    }
+
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) {
+                        Text("Annuler")
+                    }
                 }
             }
         }
@@ -1132,7 +1150,7 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: St
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CompetitionCoursesScreen(navController: NavController, competitionId: String) {
+fun CompetitionCoursesScreen(navController: NavController, competitionId: String, onFinalSave: () -> Unit) {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     var courses by remember { mutableStateOf<List<Courses>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -1142,7 +1160,6 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
     var courseToEdit by remember { mutableStateOf<Courses?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var courseToDelete by remember { mutableStateOf<Courses?>(null) }
-    var showPositionUpdateDialog by remember { mutableStateOf(false) }
     var tempPositions by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
 
     val scope = rememberCoroutineScope()
@@ -1319,76 +1336,93 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
         title = "Parcours de la compétition",
         navController = navController
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier
+            .fillMaxSize()) {
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Liste des parcours
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(courses, key = { it.id }) { course ->
+                        CourseItemModif(
+                            course = course,
+                            onEdit = { courseToEdit = course; showEditDialog = true },
+                            onDelete = { courseToDelete = course; showDeleteDialog = true },
+                            onMoveUp = { moveCourseUp(course) },
+                            onMoveDown = { moveCourseDown(course) },
+                            isFirst = courses.firstOrNull()?.id == course.id,
+                            isLast = courses.lastOrNull()?.id == course.id
+                        )
+                    }
+                }
+
+                // Bouton Ajouter un parcours (toujours visible)
+                Button(
+                    onClick = { showAddDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text("Ajouter un parcours")
+                }
+
+                // Bouton Valider les positions si modifications
+                if (tempPositions.isNotEmpty()) {
+                    Button(
+                        onClick = { savePositions() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Text("Valider les positions")
+                    }
+                }
+
+                // Bouton Valider la compétition
+                Button(
+                    onClick = {
+                        scope.launch {
+                            if (tempPositions.isNotEmpty()) {
+                                savePositions()
+                            }
+                            onFinalSave()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Valider la compétition")
+                }
+            }
+
+            // Gestion des états de chargement/erreur
             when {
                 isLoading -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }
                 }
                 error != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(error!!, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-                courses.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Aucun parcours trouvé pour cette compétition")
-                    }
-                }
-                else -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        LazyColumn(modifier = Modifier.weight(1f)) {
-                            items(courses) { course ->
-                                CourseItemModif(
-                                    course = course,
-                                    onEdit = {
-                                        courseToEdit = course
-                                        showEditDialog = true
-                                    },
-                                    onDelete = {
-                                        courseToDelete = course
-                                        showDeleteDialog = true
-                                    },
-                                    onMoveUp = { moveCourseUp(course) },
-                                    onMoveDown = { moveCourseDown(course) },
-                                    isFirst = courses.indexOf(course) == 0,
-                                    isLast = courses.indexOf(course) == courses.size - 1
-                                )
+                    Snackbar(
+                        modifier = Modifier.padding(16.dp),
+                        action = {
+                            Button(onClick = { error = null }) {
+                                Text("OK")
                             }
                         }
-
-                        if (tempPositions.isNotEmpty()) {
-                            Button(
-                                onClick = { savePositions() },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text("Valider les nouvelles positions")
-                            }
-                        }
-
-                        Button(
-                            onClick = { showAddDialog = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            Text("Ajouter un parcours")
-                        }
+                    ) {
+                        Text(error!!)
                     }
                 }
             }
