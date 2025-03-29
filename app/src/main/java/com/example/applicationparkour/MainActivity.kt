@@ -488,6 +488,11 @@ fun CompetitionScreen(navController: NavController) {
                             showAddDialog = false
                         }
                     }
+                },
+                onManageCourses = {
+                    selectedCompetition?.id?.let{ id ->
+                        navController.navigate("competitionCourses/$id")
+                    }
                 }
             )
         }
@@ -710,7 +715,8 @@ fun DeleteCompetitionDialog(
 fun CompetitionEditDialog(
     competition: Competition?,
     onDismiss: () -> Unit,
-    onSave: (Competition) -> Unit
+    onSave: (Competition) -> Unit,
+    onManageCourses : () -> Unit
 ) {
     var name by remember { mutableStateOf(competition?.name ?: "") }
     var ageMin by remember { mutableStateOf(competition?.age_min?.toString() ?: "") }
@@ -807,56 +813,52 @@ fun CompetitionEditDialog(
                     )
                     Text("Possibilité de recommencer")
                 }
-
-                /*Spacer(modifier = Modifier.height(16.dp))
-
-                Text("Statut:", style = MaterialTheme.typography.labelLarge)
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = status == "pending",
-                            onClick = { status = "pending" }
-                        )
-                        Text("En attente", modifier = Modifier.padding(start = 8.dp))
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = status == "ongoing",
-                            onClick = { status = "ongoing" }
-                        )
-                        Text("En cours", modifier = Modifier.padding(start = 8.dp))
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = status == "completed",
-                            onClick = { status = "completed" }
-                        )
-                        Text("Terminée", modifier = Modifier.padding(start = 8.dp))
-                    }
-                }*/
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val updatedCompetition = Competition(
-                        id = competition?.id ?: 0,
-                        name = name,
-                        age_min = ageMin.toIntOrNull() ?: 0,
-                        age_max = ageMax.toIntOrNull() ?: 0,
-                        gender = gender,
-                        has_retry = if (hasRetry) 1 else 0,
-                        status = status
-                    )
-                    onSave(updatedCompetition)
-                },
-                enabled = isValid
-            ) {
-                Text("Enregistrer")
+            Column {
+                // Nouveau bouton "Modifier les parcours" (seulement en mode édition)
+                if (competition != null) {
+                    Button(
+                        onClick = {
+                            onDismiss()
+                            onManageCourses()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Sports, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Modifier les parcours")
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                // Bouton Enregistrer
+                Button(
+                    onClick = {
+                        val updatedCompetition = Competition(
+                            id = competition?.id ?: 0,
+                            name = name,
+                            age_min = ageMin.toIntOrNull() ?: 0,
+                            age_max = ageMax.toIntOrNull() ?: 0,
+                            gender = gender,
+                            has_retry = if (hasRetry) 1 else 0,
+                            status = status
+                        )
+                        onSave(updatedCompetition)
+                    },
+                    enabled = isValid,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Enregistrer")
+                }
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Annuler")
             }
         }
@@ -2085,8 +2087,6 @@ fun AddCompetitorDialog(
         }
     )
 }
-
-
 
 
 @Composable
