@@ -17,6 +17,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -446,7 +449,9 @@ fun CompetitionScreen(navController: NavController) {
                 try {
                     val createdCompetition = ApiClient.apiService.addCompetition(token, baseCompetition)
                     showSuccessMessage = "Compétition créée"
-                    navController.navigate("competitionCourses/${createdCompetition.id}")
+                    navController.navigate("competitionCourses/${createdCompetition.id}"){
+                        popUpTo("competitions") {inclusive = false}
+                    }
                 } catch (e: Exception) {
                     showErrorMessage = "Erreur création: ${e.message}"
                 } finally {
@@ -817,23 +822,33 @@ fun CompetitionEditDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (competition == null){
-                    Button(
-                        onClick = {
-                            val newCompetition = Competition(
-                                id = 0,
-                                name = name.trim(),
-                                age_min = ageMin.toIntOrNull() ?: 0,
-                                age_max = ageMax.toIntOrNull() ?: 0,
-                                gender = gender,
-                                has_retry = if (hasRetry) 1 else 0,
-                                status = "pending"
+                    Column {
+                        Button(
+                            onClick = {
+                                val newCompetition = Competition(
+                                    id = 0,
+                                    name = name.trim(),
+                                    age_min = ageMin.toIntOrNull() ?: 0,
+                                    age_max = ageMax.toIntOrNull() ?: 0,
+                                    gender = gender,
+                                    has_retry = if (hasRetry) 1 else 0,
+                                    status = "pending"
+                                )
+                                onSave(newCompetition)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = isValid
+                        ) {
+                            Text("Créer et gérer les parcours")
+                        }
+                        if (nameError != null || ageMinError != null || ageMaxError != null) {
+                            Text(
+                                text = "Veuillez corriger les erreurs avant de continuer",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 8.dp)
                             )
-                            onSave(newCompetition)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = isValid
-                    ) {
-                        Text("Créer et gérer les parcours")
+                        }
                     }
                 }
                 else {
@@ -1249,6 +1264,10 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
 
     // Fonction pour sauvegarder les nouvelles positions
     fun savePositions() {
+        if(courses.isEmpty()){
+            error = "Vous devez ajouter au moins un parcours."
+            return
+        }
         scope.launch {
             try {
                 tempPositions.forEach { (courseId, newPosition) ->
@@ -1346,11 +1365,19 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                         CourseItemModif(
                             course = course,
                             onEdit = { courseToEdit = course; showEditDialog = true },
-                            onDelete = { courseToDelete = course; showDeleteDialog = true },
+                            onDelete = {
+                                if(courses.size > 1) {
+                                    courseToDelete = course;
+                                    showDeleteDialog = true
+                                }else{
+                                    error = "Vous devez conserver au moins un parcours"
+                                }
+                                       },
                             onMoveUp = { moveCourseUp(course) },
                             onMoveDown = { moveCourseDown(course) },
                             isFirst = courses.firstOrNull()?.id == course.id,
-                            isLast = courses.lastOrNull()?.id == course.id
+                            isLast = courses.lastOrNull()?.id == course.id,
+                            isOnlyCourse = courses.size == 1
                         )
                     }
                 }
@@ -1365,29 +1392,18 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                     Text("Ajouter un parcours")
                 }
 
-                // Bouton Valider les positions si modifications
-                if (tempPositions.isNotEmpty()) {
-                    Button(
-                        onClick = { savePositions() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
-                    ) {
-                        Text("Valider les positions")
-                    }
-                }
-
                 // Bouton Valider la compétition
                 Button(
                     onClick = {
-                        scope.launch {
-                            if (tempPositions.isNotEmpty()) {
-                                savePositions()
+                        if(courses.isEmpty()){
+                            error = "Vous devez ajouter au moins un parcours avant de valider"
+                        }else {
+                            scope.launch {
+                                if (tempPositions.isNotEmpty()) {
+                                    savePositions()
+                                }
+                                onFinalSave()
                             }
-                            onFinalSave()
                         }
                     },
                     modifier = Modifier
@@ -1395,7 +1411,8 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                         .padding(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
-                    )
+                    ),
+                    enabled = courses.isNotEmpty()
                 ) {
                     Text("Valider la compétition")
                 }
@@ -1558,7 +1575,8 @@ fun CourseItemModif(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     isFirst: Boolean,
-    isLast: Boolean
+    isLast: Boolean,
+    isOnlyCourse: Boolean
 ) {
     Card(
         modifier = Modifier
@@ -1588,7 +1606,7 @@ fun CourseItemModif(
                         enabled = !isFirst
                     ) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.Default.ArrowUpward,
                             contentDescription = "Monter",
                             tint = if (isFirst) Color.Gray else MaterialTheme.colorScheme.primary
                         )
@@ -1598,10 +1616,9 @@ fun CourseItemModif(
                         enabled = !isLast
                     ) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.Default.ArrowDownward,
                             contentDescription = "Descendre",
                             tint = if (isLast) Color.Gray else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.rotate(180f)
                         )
                     }
                 }
@@ -1611,8 +1628,8 @@ fun CourseItemModif(
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, "Modifier")
                     }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, "Supprimer", tint = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = onDelete, enabled = !isOnlyCourse) {
+                        Icon(Icons.Default.Delete, "Supprimer", tint = if (isOnlyCourse) Color.Gray else MaterialTheme.colorScheme.error)
                     }
                 }
             }
