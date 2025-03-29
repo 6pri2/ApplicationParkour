@@ -160,10 +160,10 @@ interface ApiService {
         @Path("id") competitionId: Int
     ): Response<Unit>
 
-    @GET("competitions/{id}/competitors")
+    @GET("competitions/{id}/inscriptions")
     suspend fun getCompetitorsByCompetition(
         @Header("Authorization") token: String,
-        @Path("id") competitionId: String
+        @Path("id") competitionId: Int
     ): List<Competitor>
 
 
@@ -774,12 +774,12 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: St
 
     LaunchedEffect(competitionId) {
         try {
-            //competitors = ApiClient.apiService.getCompetitorsByCompetition(token, competitionId)
-            competitors = emptyList()
+            competitors = ApiClient.apiService.getCompetitorsByCompetition(token, competitionId.toInt())
+            //competitors = emptyList()
             isLoading = false
         } catch (e: Exception) {
             error = when {
-                e.localizedMessage?.contains("404") == true -> "Endpoint introuvable !"
+                e.localizedMessage?.contains("404") == true -> "Endpoint introuvable ! ${e.message}"
                 else -> "Erreur: ${e.localizedMessage}"
             }
             isLoading = false
