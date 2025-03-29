@@ -7,22 +7,30 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
@@ -57,6 +65,7 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import coil.compose.AsyncImage
+import com.google.firebase.perf.util.Timer
 import com.google.type.Date
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -102,6 +111,15 @@ data class Inscription(
     val id: Int,
     val competitor: Competitor,
     val competition_id: Int
+)
+
+data class ObstacleResult(
+    val competition_id: Int,
+    val course_id: Int,
+    val competitor_id: Int,
+    val obstacle_id: Int,
+    val time: Float, // Temps en secondes avec décimales
+    val status: String // "completed" ou "failed"
 )
 
 // Interface de l'API
@@ -187,6 +205,17 @@ interface ApiService {
         @Path("competitionId") competitionId: Int
     ): List<Competitor>
 
+    @GET("courses/{courseId}/obstacles")
+    suspend fun getCourseObstacles(
+        @Header("Authorization") token: String,
+        @Path("courseId") courseId: Int
+    ): List<Obstacles>
+
+    @POST("results")
+    suspend fun saveObstacleResult(
+        @Header("Authorization") token: String,
+        @Body result: ObstacleResult
+    ): Response<Unit>
 }
 
 
@@ -1169,17 +1198,35 @@ fun ChronometreScreen(
     courseId: String,
     competitorId: String
 ) {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var obstacles by remember { mutableStateOf<List<Obstacles>>(emptyList()) }
+    var currentObstacleIndex by remember { mutableStateOf(0) }
+    var recordedTimes by remember { mutableStateOf<Map<Int, Float>>(emptyMap()) }
     var isRunning by remember { mutableStateOf(false) }
     var timeMillis by remember { mutableStateOf(0L) }
     var startTime by remember { mutableStateOf(0L) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var isResultsExpanded by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
-    // Format d'affichage MM:SS.T (T = dixièmes de seconde)
+    LaunchedEffect(recordedTimes.size) {
+        if (recordedTimes.isNotEmpty()) {
+            listState.animateScrollToItem(recordedTimes.size - 1)
+        }
+    }
+
+    // Chargement des obstacles
+    LaunchedEffect(courseId) {
+        try {
+            obstacles = ApiClient.apiService.getCourseObstacles(token, courseId.toInt())
+        } catch (e: Exception) {
+            error = "Erreur de chargement des obstacles"
+        }
+    }
+
     val formattedTime by derivedStateOf {
-        val totalSeconds = timeMillis / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        val tenths = (timeMillis % 1000) / 100
-        String.format("%02d:%02d.%d", minutes, seconds, tenths)
+        val totalSeconds = timeMillis / 1000f
+        String.format("%.1f", totalSeconds)
     }
 
     LaunchedEffect(isRunning) {
@@ -1187,7 +1234,20 @@ fun ChronometreScreen(
             startTime = System.currentTimeMillis() - timeMillis
             while (isRunning) {
                 timeMillis = System.currentTimeMillis() - startTime
-                delay(10) // Rafraîchissement toutes les 10ms
+                delay(10)
+            }
+        }
+    }
+
+    fun recordObstacleTime() {
+        val currentObstacle = obstacles.getOrNull(currentObstacleIndex)
+        currentObstacle?.let {
+            recordedTimes = recordedTimes + (it.id to (timeMillis / 1000f))
+            currentObstacleIndex++
+
+            // Arrêt automatique si dernier obstacle
+            if (currentObstacleIndex >= obstacles.size) {
+                isRunning = false
             }
         }
     }
@@ -1199,44 +1259,111 @@ fun ChronometreScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Affichage du temps
             Text(
-                text = formattedTime,
-                style = MaterialTheme.typography.displayLarge.copy(fontFamily = FontFamily.Monospace),
-                color = MaterialTheme.colorScheme.primary
+                text = "$formattedTime s",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Bouton Start/Stop
-            Button(
-                onClick = { isRunning = !isRunning },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.width(200.dp)
-            ) {
-                Text(
-                    if (isRunning) "Arrêter" else "Démarrer",
-                    style = MaterialTheme.typography.titleLarge
-                )
+            // Bouton obstacle actuel
+            if (obstacles.isNotEmpty() && currentObstacleIndex < obstacles.size) {
+                val obstacle = obstacles[currentObstacleIndex]
+                Button(
+                    onClick = { recordObstacleTime() },
+                    enabled = isRunning,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Obstacle ${currentObstacleIndex + 1}/${obstacles.size}: ${obstacle.name}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Liste des résultats avec hauteur fixe
+            if (recordedTimes.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.medium)
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        "Temps enregistrés :",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
 
-            // Bouton Réinitialiser
-            Button(
-                onClick = {
-                    isRunning = false
-                    timeMillis = 0L
-                },
-                modifier = Modifier.width(200.dp)
+                    LazyColumn(
+                        state = listState, // État de défilement
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        itemsIndexed(recordedTimes.toList()) { index, (id, time) ->
+                            val obstacle = obstacles.find { it.id == id }
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        "${index + 1}. ${obstacle?.name ?: "Inconnu"} : ${"%.1f".format(time)}s",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Default.AccessTime,
+                                        contentDescription = null
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Contrôles en bas de l'écran
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Réinitialiser", style = MaterialTheme.typography.titleMedium)
+                Button(
+                    onClick = { isRunning = !isRunning },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isRunning) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isRunning) "Arrêter" else "Démarrer")
+                }
+
+                Button(
+                    onClick = {
+                        isRunning = false
+                        timeMillis = 0L
+                        currentObstacleIndex = 0
+                        recordedTimes = emptyMap()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Réinitialiser")
+                }
+            }
+
+            // Message de fin
+            if (currentObstacleIndex >= obstacles.size) {
+                Text(
+                    text = "Course terminée !",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
         }
     }
