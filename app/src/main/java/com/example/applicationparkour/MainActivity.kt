@@ -1622,6 +1622,8 @@ fun CourseObstaclesScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var tempPositions by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    var showAddObstacleDialog by remember { mutableStateOf(false) }
+    var obstacleName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
     fun loadObstacles() {
@@ -1640,16 +1642,29 @@ fun CourseObstaclesScreen(
         }
     }
 
-    fun onBackPressed() {
-        if (courseObstacles.isEmpty()) {
-            errorMessage = "Vous devez ajouter au moins un obstacle"
-        } else {
-            navController.popBackStack()
-        }
-    }
-
     LaunchedEffect(courseId) {
         loadObstacles()
+    }
+
+    fun removeObstacle(obstacle: ObstacleCourse) {
+        scope.launch {
+            try {
+                // Vérifier qu'il reste plus d'un obstacle
+                if (courseObstacles.size <= 1) {
+                    errorMessage = "Vous devez conserver au moins un obstacle"
+                    return@launch
+                }
+
+                ApiClient.apiService.removeObstacleFromCourse(
+                    token,
+                    courseId,
+                    obstacle.obstacle_id
+                )
+                loadObstacles()
+            } catch (e: Exception) {
+                errorMessage = "Erreur de suppression: ${e.message}"
+            }
+        }
     }
 
     fun savePositions() {
@@ -1696,6 +1711,62 @@ fun CourseObstaclesScreen(
             )
         }
     }
+        if (showAddObstacleDialog) {
+            AlertDialog(
+                onDismissRequest = { showAddObstacleDialog = false
+                                   obstacleName=""},
+                title = { Text("Créer un nouvel obstacle") },
+                text = {
+                    var obstacleName by remember { mutableStateOf("") }
+                    Column {
+                        OutlinedTextField(
+                            value = obstacleName,
+                            onValueChange = { obstacleName = it },
+                            label = { Text("Nom de l'obstacle") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    // Créer le nouvel obstacle
+                                    val newObstacle = ApiClient.apiService.addObstacles(
+                                        token,
+                                        Obstacles(id = 0, name = obstacleName)
+                                    )
+                                    // Ajouter l'obstacle au parcours
+                                    ApiClient.apiService.addObstacleToCourse(
+                                        token,
+                                        courseId,
+                                        AddObstacleRequest(newObstacle.id)
+                                    )
+                                    loadObstacles()
+                                    showAddObstacleDialog = false
+                                    obstacleName=""
+                                } catch (e: Exception) {
+                                    errorMessage = "Erreur lors de la création: ${e.message}"
+                                }
+                            }
+                        },
+                        enabled = obstacleName.isNotBlank()
+                    ) {
+                        Text("Créer")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        showAddObstacleDialog = false
+                        obstacleName = ""
+                    }) {
+                        Text("Annuler")
+                    }
+                }
+            )
+        }
+
     ScreenScaffold(
         title = "Gestion des obstacles",
         navController = navController,
@@ -1770,6 +1841,16 @@ fun CourseObstaclesScreen(
                         Text("Enregistrer les positions")
                     }
                 }
+                Button(
+                    onClick = { showAddObstacleDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Créer un nouvel obstacle")
+                }
             }
 
             // Gestion des états de chargement/erreur
@@ -1810,7 +1891,8 @@ fun ObstacleItem(
     onDelete: (() -> Unit)? = null,
     onAdd: (() -> Unit)? = null,
     isFirst: Boolean = false,
-    isLast: Boolean = false
+    isLast: Boolean = false,
+    isOnlyObstacle: Boolean = false
 ) {
     Card(
         modifier = Modifier
@@ -1861,11 +1943,14 @@ fun ObstacleItem(
                 // Bouton d'action (suppression ou ajout)
                 Row {
                     if (onDelete != null) {
-                        IconButton(onClick = onDelete) {
+                        IconButton(
+                            onClick = onDelete ?: {},
+                            enabled = !isOnlyObstacle  // Désactiver si c'est le dernier obstacle
+                        ) {
                             Icon(
                                 Icons.Default.Delete,
                                 "Supprimer",
-                                tint = MaterialTheme.colorScheme.error
+                                tint = if (isOnlyObstacle) Color.Gray else MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -1916,30 +2001,6 @@ fun CourseAddDialog(
                 )
             }
         },
-        /*confirmButton = {
-            Button(
-                onClick = {
-                    onSave(
-                        Courses(
-                            id = 0,
-                            name = name,
-                            max_duration = maxDuration.toIntOrNull() ?: 0,
-                            position = defaultPosition,
-                            is_over = 0,
-                            competition_id = competitionId.toInt()
-                        )
-                    )
-                },
-                enabled = name.isNotBlank() && maxDuration.isNotBlank()
-            ) {
-                Text("Ajouter")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Annuler")
-            }
-        }*/
         confirmButton = {
             Button(
                 onClick = {
@@ -1960,57 +2021,7 @@ fun CourseAddDialog(
             }
         }
 
-    )/*
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            text = "Ajouter un parcours",
-            style = MaterialTheme.typography.headlineSmall
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Nom") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = maxDuration,
-            onValueChange = { if (it.all { c -> c.isDigit() }) maxDuration = it },
-            label = { Text("Durée maximale (secondes)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            Button(
-                onClick = {
-                    onSave(
-                        Courses(
-                            id = 0,
-                            name = name,
-                            max_duration = maxDuration.toIntOrNull() ?: 0,
-                            position = defaultPosition,
-                            is_over = 0,
-                            competition_id = competitionId.toInt()
-                        )
-                    )
-                },
-                enabled = name.isNotBlank() && maxDuration.isNotBlank()
-            ) {
-                Text("Ajouter et gérer les obstacles")
-            }
-        }
-    }*/
+    )
 }
 
 @Composable
