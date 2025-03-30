@@ -2,11 +2,13 @@ package com.example.applicationparkour
 
 import android.graphics.Picture
 import android.os.Bundle
+import android.os.Debug
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -63,7 +66,10 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.coroutineScope
 
 
 // --- Configuration Retrofit ---
@@ -231,6 +237,39 @@ interface ApiService {
         @Path("id") courseId: Int
     ): Response<Unit>
 
+    @GET("courses/{id}/obstacles")
+    suspend fun getCourseObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") courseId: Int
+    ): List<ObstacleCourse>
+
+    @GET("courses/{id}/unused_obstacles")
+    suspend fun getUnusedObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") courseId: Int
+    ): List<Obstacles>
+
+    @POST("courses/{courseId}/add_obstacle")
+    suspend fun addObstacleToCourse(
+        @Header("Authorization") token: String,
+        @Path("courseId") courseId: Int,
+        @Body request: AddObstacleRequest
+    ): Response<Unit>
+
+    @DELETE("courses/{courseId}/remove_obstacle/{obstacleId}")
+    suspend fun removeObstacleFromCourse(
+        @Header("Authorization") token: String,
+        @Path("courseId") courseId: Int,
+        @Path("obstacleId") obstacleId: Int
+    ): Response<Unit>
+
+    @PUT("courses/{courseId}/update_obstacles_position")
+    suspend fun updateObstaclesPosition(
+        @Header("Authorization") token: String,
+        @Path("courseId") courseId: Int,
+        @Body request: UpdateObstaclesPositionRequest
+    ): Response<Unit>
+
 }
 data class AddCompetitorRequest(
     @SerializedName("competitor_id")
@@ -249,6 +288,23 @@ data class CreateCourseRequest(
     val max_duration: Int,
     @SerializedName("competition_id")
     val competitionId: Int
+)
+
+data class ObstacleCourse(
+    val id: Int,
+    val name: String,
+    val duration: Int, // À confirmer selon l'API
+    val position: Int
+)
+
+data class AddObstacleRequest(
+    @SerializedName("obstacle_id")
+    val obstacleId: Int
+)
+
+data class UpdateObstaclesPositionRequest(
+    @SerializedName("obstacle_ids")
+    val obstacleIds: List<Int>
 )
 
 
@@ -340,6 +396,11 @@ fun ParkourApp() {
             CompetitionCoursesScreen(navController, competitionId, onFinalSave = {
                 navController.popBackStack()
             })
+        }
+
+        composable("courseObstacles/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull() ?: 0
+            CourseObstaclesScreen(navController, courseId)
         }
     }
 }
@@ -1290,12 +1351,17 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
 
     // Dialogue d'édition
     if (showEditDialog && courseToEdit != null) {
+        val currentCourse = courseToEdit!!
         CourseEditDialog(
-            course = courseToEdit!!,
+            course = currentCourse,
             onDismiss = { showEditDialog = false },
             onSave = { updatedCourse ->
                 updateCourse(updatedCourse)
                 showEditDialog = false
+            },
+            onManageObstacles = {
+                navController.navigate("courseObstacles/${currentCourse.id}")
+                showEditDialog = false // Fermer le dialogue
             }
         )
     }
@@ -1451,7 +1517,8 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
 fun CourseEditDialog(
     course: Courses,
     onDismiss: () -> Unit,
-    onSave: (Courses) -> Unit
+    onSave: (Courses) -> Unit,
+    onManageObstacles : () -> Unit
 ) {
     var name by remember { mutableStateOf(course.name) }
     var maxDuration by remember { mutableStateOf(course.max_duration.toString()) }
@@ -1476,6 +1543,14 @@ fun CourseEditDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onManageObstacles,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Gérer les Obstacles")
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
@@ -1508,6 +1583,340 @@ fun CourseEditDialog(
         }
     )
 }
+
+@Composable
+fun CourseObstaclesScreen(
+    navController: NavController,
+    courseId: Int
+) {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var courseObstacles by remember { mutableStateOf<List<ObstacleCourse>>(emptyList()) }
+    var unusedObstacles by remember { mutableStateOf<List<Obstacles>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var tempPositions by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    val scope = rememberCoroutineScope()
+
+    fun loadObstacles() {
+        scope.launch {
+            isLoading = true
+            try {
+                val updatedObstacles = ApiClient.apiService.getCourseObstacles(token, courseId)
+                val updatedUnused = ApiClient.apiService.getUnusedObstacles(token, courseId)
+                courseObstacles = updatedObstacles.sortedBy { it.position }
+                unusedObstacles = updatedUnused
+            } catch (e: Exception) {
+                errorMessage = "Erreur de chargement: ${e.message}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+
+    LaunchedEffect(courseId) {
+        loadObstacles()
+    }
+
+    fun savePositions() {
+        scope.launch {
+            try {
+                if (tempPositions.isNotEmpty()) {
+                    ApiClient.apiService.updateObstaclesPosition(
+                        token,
+                        courseId,
+                        UpdateObstaclesPositionRequest(courseObstacles.map { it.id })
+                    )
+                    tempPositions = emptyMap()
+                }
+            } catch (e: Exception) {
+                errorMessage = "Erreur lors de la sauvegarde: ${e.message}"
+            }
+        }
+    }
+    fun moveObstacleUp(obstacle: ObstacleCourse) {
+        val currentIndex = courseObstacles.indexOfFirst { it.id == obstacle.id }
+        if (currentIndex > 0) {
+            val newPosition = courseObstacles[currentIndex - 1].position
+            val temp = courseObstacles.toMutableList()
+            temp[currentIndex] = temp[currentIndex].copy(position = newPosition)
+            temp[currentIndex - 1] = temp[currentIndex - 1].copy(position = obstacle.position)
+            courseObstacles = temp.sortedBy { it.position }
+            tempPositions = tempPositions + mapOf(
+                temp[currentIndex].id to newPosition,
+                temp[currentIndex - 1].id to obstacle.position
+            )
+        }
+    }
+    fun moveObstacleDown(obstacle: ObstacleCourse) {
+        val currentIndex = courseObstacles.indexOfFirst { it.id == obstacle.id }
+        if (currentIndex < courseObstacles.size - 1) {
+            val newPosition = courseObstacles[currentIndex + 1].position
+            val temp = courseObstacles.toMutableList()
+            temp[currentIndex] = temp[currentIndex].copy(position = newPosition)
+            temp[currentIndex + 1] = temp[currentIndex + 1].copy(position = obstacle.position)
+            courseObstacles = temp.sortedBy { it.position }
+            tempPositions = tempPositions + mapOf(
+                temp[currentIndex].id to newPosition,
+                temp[currentIndex + 1].id to obstacle.position
+            )
+        }
+    }
+    ScreenScaffold(
+        title = "Gestion des obstacles",
+        navController = navController
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Liste des obstacles du parcours
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(courseObstacles, key = { it.id }) { obstacle ->
+                        ObstacleItem(
+                            obstacle = obstacle,
+                            onMoveUp = { moveObstacleUp(obstacle) },
+                            onMoveDown = { moveObstacleDown(obstacle) },
+                            onDelete = {
+                                scope.launch {
+                                    try {
+                                        ApiClient.apiService.removeObstacleFromCourse(
+                                            token,
+                                            courseId,
+                                            obstacle.id
+                                        )
+                                        loadObstacles()
+                                    } catch (e: Exception) {
+                                        errorMessage = "Erreur de suppression: ${e.message}"
+                                    }
+                                }
+                            },
+                            isFirst = courseObstacles.firstOrNull()?.id == obstacle.id,
+                            isLast = courseObstacles.lastOrNull()?.id == obstacle.id
+                        )
+                    }
+                }
+
+                // Liste des obstacles disponibles
+                Text("Obstacles disponibles:", modifier = Modifier.padding(8.dp))
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(unusedObstacles) { obstacle ->
+                        ObstacleItem(
+                            obstacle = ObstacleCourse(
+                                id = obstacle.id,
+                                name = obstacle.name,
+                                duration = 0,
+                                position = 0
+                            ),
+                            onAdd = {
+                                scope.launch {
+                                    try {
+                                        ApiClient.apiService.addObstacleToCourse(
+                                            token,
+                                            courseId,
+                                            AddObstacleRequest(obstacle.id)
+                                        )
+                                        loadObstacles()
+                                    } catch (e: Exception) {
+                                        errorMessage = "Erreur d'ajout: ${e.message}"
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // Bouton de sauvegarde
+                if (tempPositions.isNotEmpty()) {
+                    Button(
+                        onClick = { savePositions() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text("Enregistrer les positions")
+                    }
+                }
+            }
+
+            // Gestion des états de chargement/erreur
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                errorMessage != null -> {
+                    Snackbar(
+                        modifier = Modifier.padding(16.dp),
+                        action = {
+                            Button(onClick = { errorMessage = null }) {
+                                Text("OK")
+                            }
+                        }
+                    ) {
+                        Text(errorMessage!!)
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun ObstacleItem(
+    obstacle: ObstacleCourse,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    onAdd: (() -> Unit)? = null,
+    isFirst: Boolean = false,
+    isLast: Boolean = false
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = obstacle.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            if (obstacle.position > 0) {
+                Text(text = "Position: ${obstacle.position}")
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Boutons de déplacement (seulement pour les obstacles du parcours)
+                if (onMoveUp != null && onMoveDown != null) {
+                    Row {
+                        IconButton(
+                            onClick = onMoveUp,
+                            enabled = !isFirst
+                        ) {
+                            Icon(
+                                Icons.Default.ArrowUpward,
+                                contentDescription = "Monter",
+                                tint = if (isFirst) Color.Gray else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        IconButton(
+                            onClick = onMoveDown,
+                            enabled = !isLast
+                        ) {
+                            Icon(
+                                Icons.Default.ArrowDownward,
+                                contentDescription = "Descendre",
+                                tint = if (isLast) Color.Gray else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                // Bouton d'action (suppression ou ajout)
+                Row {
+                    if (onDelete != null) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                Icons.Default.Delete,
+                                "Supprimer",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    if (onAdd != null) {
+                        IconButton(onClick = onAdd) {
+                            Icon(
+                                Icons.Default.Add,
+                                "Ajouter",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+/*@Composable
+fun ReorderableList(
+    items: List<ObstacleCourse>,
+    onReorder: (List<ObstacleCourse>) -> Unit,
+    content: @Composable (ObstacleCourse) -> Unit
+) {
+    var draggedItem by remember { mutableStateOf<ObstacleCourse?>(null) }
+
+    Column {
+        items.forEach { obstacle ->
+            Box(
+                modifier = Modifier
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { draggedItem = obstacle },
+                            onDragEnd = {
+                                draggedItem = null,
+                                // Envoyer le nouvel ordre uniquement à la fin du drag
+                                onReorder(items)
+                            }
+                        )
+                    }
+                    .zIndex(if (draggedItem == obstacle) 1f else 0f)
+            ) {
+                content(obstacle)
+            }
+        }
+    }
+}*/
+/*
+@Composable
+fun ObstacleEditDialog(
+    obstacle: ObstacleCourse,
+    onDismiss: () -> Unit,
+    onSave: (ObstacleCourse) -> Unit
+) {
+    var name by remember { mutableStateOf(obstacle.name) }
+    var duration by remember { mutableStateOf(obstacle.duration.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Modifier l'obstacle") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nom") }
+                )
+                OutlinedTextField(
+                    value = duration,
+                    onValueChange = { duration = it },
+                    label = { Text("Durée (secondes)") },
+                    keyboardOptions = KeyboardType.Number
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                onSave(obstacle.copy(
+                    name = name,
+                    duration = duration.toIntOrNull() ?: obstacle.duration
+                ))
+            }) {
+                Text("Enregistrer")
+            }
+        }
+    )
+}*/
 
 @Composable
 fun CourseAddDialog(
