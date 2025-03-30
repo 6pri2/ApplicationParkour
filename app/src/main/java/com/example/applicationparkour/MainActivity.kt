@@ -3,6 +3,7 @@ package com.example.applicationparkour
 import android.graphics.Picture
 import android.os.Build
 import android.os.Bundle
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.Image
@@ -28,12 +29,12 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sports
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -359,8 +360,17 @@ fun CompetitionScreen(navController: NavController) {
         var isLoading by remember { mutableStateOf(false) }
         var showSuccessMessage by remember { mutableStateOf<String?>(null) }
         var showErrorMessage by remember { mutableStateOf<String?>(null) }
+        var searchQuery by remember { mutableStateOf("") }
 
         val scope = rememberCoroutineScope()
+
+        // Filter competitions based on search query
+        val filteredCompetitions = remember(competitions, searchQuery) {
+            competitions?.filter { competition ->
+                competition.name.contains(searchQuery, ignoreCase = true) ||
+                        competition.status.contains(searchQuery, ignoreCase = true)
+            }
+        }
 
         // Fonction pour charger les compétitions
         fun loadCompetitions() {
@@ -455,123 +465,307 @@ fun CompetitionScreen(navController: NavController) {
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                when {
-                    isLoading && competitions == null -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Rechercher une compétition") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Rechercher") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                singleLine = true
+            )
+
+            when {
+                isLoading && competitions == null -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
-                    competitions == null -> {
-                        // Already handled by isLoading case
-                    }
-                    competitions!!.isEmpty() -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Aucune compétition trouvée")
-                        }
-                    }
-                    else -> {
-                        LazyColumn(modifier = Modifier.weight(1f)) {
-                            items(competitions!!) { competition ->
-                                CompetitionItem(
-                                    competition = competition,
-                                    onEdit = {
-                                        selectedCompetition = competition
-                                        showEditDialog = true
-                                    },
-                                    onDelete = {
-                                        selectedCompetition = competition
-                                        showDeleteDialog = true
-                                    },
-                                    onCompetitors = {
-                                        navController.navigate("competitors/${competition.id}")
-                                    },
-                                    onResults = {
-                                        navController.navigate("results/${competition.id}")
-                                    },
-                                    onArbitrage = {
-                                        navController.navigate("arbitrage/${competition.id}")
-                                    }
+                }
+                filteredCompetitions?.isEmpty() == true -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.EmojiEvents,
+                                contentDescription = "Aucune compétition",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Aucune compétition trouvée",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            if (searchQuery.isNotEmpty()) {
+                                Text(
+                                    "Essayez une autre recherche",
+                                    style = MaterialTheme.typography.bodySmall
                                 )
                             }
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { showAddDialog = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    enabled = !isLoading
-                ) {
-                    Text("Ajouter une compétition")
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredCompetitions ?: emptyList()) { competition ->
+                            CompetitionCard(
+                                competition = competition,
+                                onEdit = {
+                                    selectedCompetition = competition
+                                    showEditDialog = true
+                                },
+                                onDelete = {
+                                    selectedCompetition = competition
+                                    showDeleteDialog = true
+                                },
+                                onCompetitors = {
+                                    navController.navigate("competitors/${competition.id}")
+                                },
+                                onResults = {
+                                    navController.navigate("results/${competition.id}")
+                                },
+                                onArbitrage = {
+                                    navController.navigate("arbitrage/${competition.id}")
+                                }
+                            )
+                        }
+                    }
                 }
             }
 
-            // Indicateur de chargement pour les opérations
-            if (isLoading && competitions != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+            // Add competition button
+            ElevatedButton(
+                onClick = { showAddDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                colors = ButtonDefaults.elevatedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                enabled = !isLoading
+            ) {
+                Icon(
+                    Icons.Default.EmojiEvents,
+                    contentDescription = "Ajouter",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ajouter une compétition")
             }
+        }
 
-            // Messages toast
+        // Indicateur de chargement pour les opérations
+        if (isLoading && competitions != null) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp)
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
             ) {
-                showSuccessMessage?.let { message ->
-                    Snackbar(
-                        modifier = Modifier.padding(16.dp),
-                        action = {
-                            IconButton(onClick = { showSuccessMessage = null }) {
-                                Icon(Icons.Default.Close, "Fermer")
-                            }
-                        }
-                    ) {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
+                CircularProgressIndicator()
+            }
+        }
 
-                showErrorMessage?.let { message ->
-                    Snackbar(
-                        modifier = Modifier.padding(16.dp),
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        action = {
-                            IconButton(onClick = { showErrorMessage = null }) {
-                                Icon(Icons.Default.Close, "Fermer")
-                            }
+        // Messages toast
+        Box(
+            modifier = Modifier.padding(bottom = 16.dp),contentAlignment = Alignment.BottomCenter
+        ) {
+            showSuccessMessage?.let { message ->
+                Snackbar(
+                    modifier = Modifier.padding(16.dp),
+                    action = {
+                        IconButton(onClick = { showSuccessMessage = null }) {
+                            Icon(Icons.Default.Close, "Fermer")
                         }
-                    ) {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
                     }
+                ) {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            showErrorMessage?.let { message ->
+                Snackbar(
+                    modifier = Modifier.padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    action = {
+                        IconButton(onClick = { showErrorMessage = null }) {
+                            Icon(Icons.Default.Close, "Fermer")
+                        }
+                    }
+                ) {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
                 }
             }
         }
     }
 }
+
+
+@Composable
+fun CompetitionCard(
+    competition: Competition,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onCompetitors: () -> Unit,
+    onResults: () -> Unit,
+    onArbitrage: () -> Unit
+) {
+    val statusColor = when (competition.status) {
+        "pending" -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        "ongoing" -> MaterialTheme.colorScheme.primary
+        "completed" -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = "Compétition",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = competition.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Statut: ${competition.status.replaceFirstChar { it.uppercase() }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = statusColor
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Competition details
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Âge: ${competition.age_min}-${competition.age_max} ans",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "Genre: ${if (competition.gender == "H") "Homme" else "Femme"}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Retry: ${if (competition.has_retry == 1) "Oui" else "Non"}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // Action buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Modifier",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Supprimer",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                IconButton(
+                    onClick = onCompetitors,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Compétiteurs",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(
+                    onClick = onResults,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Résultats",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(
+                    onClick = onArbitrage,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Arbitrage",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun CompetitionItem(
@@ -1068,13 +1262,22 @@ fun CompetitorScreen(navController: NavController) {
         val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
         var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
         var showDialog by remember { mutableStateOf(false) }
-        var competitorToEdit by remember { mutableStateOf<Competitor?>(null) }  // Pour l'édition
-        var showDeleteDialog by remember { mutableStateOf(false) }  // Pour la confirmation de suppression
-        var competitorToDelete by remember { mutableStateOf<Competitor?>(null) } // Compétiteur à supprimer
+        var competitorToEdit by remember { mutableStateOf<Competitor?>(null) }
+        var showDeleteDialog by remember { mutableStateOf(false) }
+        var competitorToDelete by remember { mutableStateOf<Competitor?>(null) }
+        var searchQuery by remember { mutableStateOf("") }
 
         val scope = rememberCoroutineScope()
 
-        // Fonction pour mettre à jour la liste des compétiteurs
+        // Filter competitors based on search query
+        val filteredCompetitors = remember(competitors, searchQuery) {
+            competitors?.filter { competitor ->
+                competitor.first_name.contains(searchQuery, ignoreCase = true) ||
+                        competitor.last_name.contains(searchQuery, ignoreCase = true) ||
+                        competitor.email.contains(searchQuery, ignoreCase = true)
+            }
+        }
+
         val updateCompetitors = {
             scope.launch {
                 try {
@@ -1085,25 +1288,22 @@ fun CompetitorScreen(navController: NavController) {
             }
         }
 
-        // Charger les compétiteurs au démarrage de l'écran
         LaunchedEffect(true) {
-            updateCompetitors() // Charger les compétiteurs lorsque l'écran est chargé
+            updateCompetitors()
         }
 
-        // Affichage du dialog pour ajouter ou modifier un compétiteur
         if (showDialog) {
             AddCompetitorDialog(
                 token = token,
-                competitor = competitorToEdit, // Passer le compétiteur à modifier (null si ajout)
+                competitor = competitorToEdit,
                 onDismiss = { showDialog = false },
                 onCompetitorsUpdated = {
-                    updateCompetitors() // Mettre à jour la liste des compétiteurs
+                    updateCompetitors()
                     showDialog = false
                 }
             )
         }
 
-        // Affichage du dialog de suppression
         if (showDeleteDialog && competitorToDelete != null) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
@@ -1114,111 +1314,134 @@ fun CompetitorScreen(navController: NavController) {
                 confirmButton = {
                     Button(
                         onClick = {
-                            // Supprimer le compétiteur via l'API
                             scope.launch {
                                 try {
                                     ApiClient.apiService.deleteCompetitor(
                                         token,
                                         competitorToDelete!!.id
-                                    ) // Suppression via l'API
-                                    updateCompetitors() // Mise à jour de la liste après suppression
+                                    )
+                                    updateCompetitors()
                                     showDeleteDialog = false
                                 } catch (e: Exception) {
                                     println("Erreur lors de la suppression : ${e.message}")
                                 }
                             }
-                        }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
                     ) {
                         Text("Supprimer")
                     }
                 },
                 dismissButton = {
-                    Button(onClick = { showDeleteDialog = false }) { Text("Annuler") }
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Annuler")
+                    }
                 }
             )
         }
 
-        // Affichage de la liste des compétiteurs
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Rechercher un compétiteur") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Rechercher") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                singleLine = true
+            )
+
             when {
                 competitors == null -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally)) // Si les compétiteurs sont en cours de chargement
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
 
-                competitors!!.isEmpty() -> {
-                    Text(
-                        "Aucun compétiteur trouvé.",
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    ) // Si aucune donnée n'est disponible
+                filteredCompetitors?.isEmpty() == true -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Aucun compétiteur",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Aucun compétiteur trouvé",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            if (searchQuery.isNotEmpty()) {
+                                Text(
+                                    "Essayez une autre recherche",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
                 }
 
                 else -> {
-                    LazyColumn(modifier = Modifier.weight(1f)) { // Donne de l'espace au LazyColumn
-                        items(competitors!!) { competitor ->
-                            val fullName = "${competitor.first_name} ${competitor.last_name}"
-                            val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
-                            // Calculer l'âge
-                            val age = calculateAge(birthDate)
-
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                elevation = CardDefaults.cardElevation(4.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "Nom: $fullName",
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                    Text(text = "Âge: $age ans")
-                                    Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
-
-                                    // Icônes pour modifier et supprimer
-                                    Row(
-                                        horizontalArrangement = Arrangement.End,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        IconButton(onClick = {
-                                            competitorToEdit = competitor // Lancer l'édition
-                                            showDialog = true // Afficher le dialog d'édition
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Modifier"
-                                            )
-                                        }
-
-                                        IconButton(onClick = {
-                                            competitorToDelete = competitor // Lancer la suppression
-                                            showDeleteDialog =
-                                                true // Afficher la confirmation de suppression
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Supprimer"
-                                            )
-                                        }
-                                    }
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredCompetitors ?: emptyList()) { competitor ->
+                            CompetitorCard(
+                                competitor = competitor,
+                                onEdit = {
+                                    competitorToEdit = competitor
+                                    showDialog = true
+                                },
+                                onDelete = {
+                                    competitorToDelete = competitor
+                                    showDeleteDialog = true
                                 }
-                            }
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp)) // Un espacement entre la liste et le bouton
-
-            // Le bouton "Ajouter un compétiteur"
-            Button(
+            // Add competitor button with elevation
+            ElevatedButton(
                 onClick = {
                     competitorToEdit = null
                     showDialog = true
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                colors = ButtonDefaults.elevatedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             ) {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = "Ajouter",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Ajouter un compétiteur")
             }
         }
@@ -1346,20 +1569,93 @@ fun AddCompetitorDialog(
 
 
 @Composable
-fun CompetitorCard(competitor: Competitor) {
+fun CompetitorCard(
+    competitor: Competitor,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     val fullName = "${competitor.first_name} ${competitor.last_name}"
     val age = calculateAge(competitor.born_at)
+    val genderIcon = if (competitor.gender == "H") Icons.Default.Person else Icons.Default.Person
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Âge: $age ans")
-            Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = genderIcon,
+                    contentDescription = "Genre",
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = fullName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${age} ans • ${competitor.email}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Contact info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = competitor.phone,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = competitor.born_at,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Action buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Modifier",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Supprimer",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
     }
 }
