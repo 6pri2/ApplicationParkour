@@ -543,6 +543,7 @@ fun CompetitionScreen(navController: NavController) {
         if (showEditDialog && selectedCompetition != null) {
             CompetitionEditDialog(
                 competition = selectedCompetition,
+                navController = navController,
                 onDismiss = { showEditDialog = false },
                 onSave = { updatedCompetition ->
                     scope.launch {
@@ -572,6 +573,7 @@ fun CompetitionScreen(navController: NavController) {
         if (showAddDialog) {
             CompetitionEditDialog(
                 competition = null,
+                navController = navController,
                 onDismiss = { showAddDialog = false },
                 onSave = ::createCompetitionAndManageCourses,
                 onManageCourses = {} // Pas utilisé en création
@@ -774,6 +776,7 @@ fun DeleteCompetitionDialog(
 @Composable
 fun CompetitionEditDialog(
     competition: Competition?,
+    navController: NavController,
     onDismiss: () -> Unit,
     onSave: (Competition) -> Unit,
     onManageCourses: () -> Unit
@@ -896,7 +899,19 @@ fun CompetitionEditDialog(
                                     has_retry = if (hasRetry) 1 else 0,
                                     status = "pending"
                                 )
-                                onSave(newCompetition)
+                                scope.launch {
+                                    try {
+                                        val createdCompetition = ApiClient.apiService.addCompetition(
+                                            token,
+                                            newCompetition
+                                        )
+                                        navController.navigate("competitionCourses/${createdCompetition.id}") {
+                                            popUpTo("competitions") { inclusive = false }
+                                        }
+                                    } catch (e: Exception) {
+                                        // Gérer l'erreur ici
+                                    }
+                                }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = isValid
@@ -1284,15 +1299,19 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
     fun deleteCourse(courseId: Int) {
         scope.launch {
             try {
-                // Note: Tu devras ajouter cette méthode dans ton interface ApiService
-                ApiClient.apiService.deleteCourse(token, courseId)
-                loadCourses()
+                // Vérifier d'abord s'il y a des obstacles
+                val obstacles = ApiClient.apiService.getCourseObstacles(token, courseId)
+                if (obstacles.isEmpty()) {
+                    ApiClient.apiService.deleteCourse(token, courseId)
+                    loadCourses()
+                } else {
+                    error = "Vous ne pouvez pas supprimer un parcours avec des obstacles"
+                }
             } catch (e: Exception) {
                 error = "Erreur de suppression: ${e.message}"
             }
         }
     }
-
     // Fonction pour changer la position d'un parcours
     fun moveCourseUp(course: Courses) {
         val currentIndex = courses.indexOfFirst { it.id == course.id }
@@ -1375,7 +1394,8 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
             onSave = { newCourse ->
                 scope.launch {
                     try {
-                        ApiClient.apiService.addCourse(
+                        // 1. Créer le parcours
+                        val createdCourse = ApiClient.apiService.addCourse(
                             token,
                             CreateCourseRequest(
                                 name = newCourse.name,
@@ -1383,8 +1403,13 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                                 competitionId = competitionId.toInt()
                             )
                         )
-                        loadCourses()
+
+                        // 2. Rediriger vers la gestion des obstacles
+                        navController.navigate("courseObstacles/${createdCourse.id}")
+
+                        // 3. Fermer le dialogue et recharger la liste
                         showAddDialog = false
+                        loadCourses()
                     } catch (e: Exception) {
                         error = "Erreur lors de l'ajout: ${e.message}"
                     }
@@ -1615,6 +1640,13 @@ fun CourseObstaclesScreen(
         }
     }
 
+    fun onBackPressed() {
+        if (courseObstacles.isEmpty()) {
+            errorMessage = "Vous devez ajouter au moins un obstacle"
+        } else {
+            navController.popBackStack()
+        }
+    }
 
     LaunchedEffect(courseId) {
         loadObstacles()
@@ -1666,7 +1698,8 @@ fun CourseObstaclesScreen(
     }
     ScreenScaffold(
         title = "Gestion des obstacles",
-        navController = navController
+        navController = navController,
+        //onBackPressed = {onBackPressed()}
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -1850,79 +1883,11 @@ fun ObstacleItem(
         }
     }
 }
-/*@Composable
-fun ReorderableList(
-    items: List<ObstacleCourse>,
-    onReorder: (List<ObstacleCourse>) -> Unit,
-    content: @Composable (ObstacleCourse) -> Unit
-) {
-    var draggedItem by remember { mutableStateOf<ObstacleCourse?>(null) }
 
-    Column {
-        items.forEach { obstacle ->
-            Box(
-                modifier = Modifier
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { draggedItem = obstacle },
-                            onDragEnd = {
-                                draggedItem = null,
-                                // Envoyer le nouvel ordre uniquement à la fin du drag
-                                onReorder(items)
-                            }
-                        )
-                    }
-                    .zIndex(if (draggedItem == obstacle) 1f else 0f)
-            ) {
-                content(obstacle)
-            }
-        }
-    }
-}*/
-/*
-@Composable
-fun ObstacleEditDialog(
-    obstacle: ObstacleCourse,
-    onDismiss: () -> Unit,
-    onSave: (ObstacleCourse) -> Unit
-) {
-    var name by remember { mutableStateOf(obstacle.name) }
-    var duration by remember { mutableStateOf(obstacle.duration.toString()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Modifier l'obstacle") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nom") }
-                )
-                OutlinedTextField(
-                    value = duration,
-                    onValueChange = { duration = it },
-                    label = { Text("Durée (secondes)") },
-                    keyboardOptions = KeyboardType.Number
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                onSave(obstacle.copy(
-                    name = name,
-                    duration = duration.toIntOrNull() ?: obstacle.duration
-                ))
-            }) {
-                Text("Enregistrer")
-            }
-        }
-    )
-}*/
 
 @Composable
 fun CourseAddDialog(
-    competitionId: String, // Ajoute ce paramètre
+    competitionId: String,
     onDismiss: () -> Unit,
     onSave: (Courses) -> Unit,
     defaultPosition: Int
@@ -1951,7 +1916,7 @@ fun CourseAddDialog(
                 )
             }
         },
-        confirmButton = {
+        /*confirmButton = {
             Button(
                 onClick = {
                     onSave(
@@ -1974,8 +1939,78 @@ fun CourseAddDialog(
             Button(onClick = onDismiss) {
                 Text("Annuler")
             }
+        }*/
+        confirmButton = {
+            Button(
+                onClick = {
+                    val newCourse = Courses(
+                        id = 0,  // L'ID sera généré par le serveur
+                        name = name,
+                        max_duration = maxDuration.toIntOrNull() ?: 0,
+                        position = defaultPosition,
+                        is_over = 0,
+                        competition_id = competitionId.toInt()
+                    )
+                    onSave(newCourse)
+                },
+                enabled = name.isNotBlank() && maxDuration.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Ajouter et gérer les obstacles")
+            }
         }
-    )
+
+    )/*
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "Ajouter un parcours",
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Nom") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = maxDuration,
+            onValueChange = { if (it.all { c -> c.isDigit() }) maxDuration = it },
+            label = { Text("Durée maximale (secondes)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Button(
+                onClick = {
+                    onSave(
+                        Courses(
+                            id = 0,
+                            name = name,
+                            max_duration = maxDuration.toIntOrNull() ?: 0,
+                            position = defaultPosition,
+                            is_over = 0,
+                            competition_id = competitionId.toInt()
+                        )
+                    )
+                },
+                enabled = name.isNotBlank() && maxDuration.isNotBlank()
+            ) {
+                Text("Ajouter et gérer les obstacles")
+            }
+        }
+    }*/
 }
 
 @Composable
@@ -1989,6 +2024,17 @@ fun CourseItemModif(
     isLast: Boolean,
     isOnlyCourse: Boolean
 ) {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var hasObstacles by remember { mutableStateOf(false) }
+
+    LaunchedEffect(course.id) {
+        try {
+            val obstacles = ApiClient.apiService.getCourseObstacles(token, course.id)
+            hasObstacles = obstacles.isNotEmpty()
+        } catch (e: Exception) {
+            // Gérer l'erreur si nécessaire
+        }
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -2039,8 +2085,15 @@ fun CourseItemModif(
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, "Modifier")
                     }
-                    IconButton(onClick = onDelete, enabled = !isOnlyCourse) {
-                        Icon(Icons.Default.Delete, "Supprimer", tint = if (isOnlyCourse) Color.Gray else MaterialTheme.colorScheme.error)
+                    IconButton(
+                        onClick = onDelete,
+                        enabled = !isOnlyCourse && !hasObstacles
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            "Supprimer",
+                            tint = if (isOnlyCourse || hasObstacles) Color.Gray else MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             }
