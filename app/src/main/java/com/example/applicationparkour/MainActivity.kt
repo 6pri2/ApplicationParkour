@@ -1,15 +1,11 @@
 package com.example.applicationparkour
 
 import android.annotation.SuppressLint
-import android.graphics.Picture
-import android.icu.text.SimpleDateFormat
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,18 +16,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sports
@@ -40,8 +30,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -64,11 +52,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
-import coil.compose.AsyncImage
-import com.google.firebase.perf.util.Timer
-import com.google.type.Date
 import kotlinx.coroutines.delay
-import java.util.Locale
 
 
 // --- Configuration Retrofit ---
@@ -104,7 +88,7 @@ data class Courses(
 
 data class Obstacles(
     val id: Int,
-    val name: String,
+    val obstacle_name: String,
 )
 
 data class Inscription(
@@ -1206,7 +1190,6 @@ fun ChronometreScreen(
     var timeMillis by remember { mutableStateOf(0L) }
     var startTime by remember { mutableStateOf(0L) }
     var error by remember { mutableStateOf<String?>(null) }
-    var isResultsExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(recordedTimes.size) {
@@ -1279,7 +1262,7 @@ fun ChronometreScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Obstacle ${currentObstacleIndex + 1}/${obstacles.size}: ${obstacle.name}",
+                        text = "Obstacle ${currentObstacleIndex + 1}/${obstacles.size}: ${obstacle.obstacle_name}",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -1311,7 +1294,7 @@ fun ChronometreScreen(
                             ListItem(
                                 headlineContent = {
                                     Text(
-                                        "${index + 1}. ${obstacle?.name ?: "Inconnu"} : ${"%.1f".format(time)}s",
+                                        "${index + 1}. ${obstacle?.obstacle_name ?: "Inconnu"} : ${"%.1f".format(time)}s",
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 },
@@ -1778,7 +1761,7 @@ fun ObstaclesScreen(navController: NavController) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
                 title = { Text("Confirmer la suppression") },
-                text = { Text("Voulez-vous vraiment supprimer ${obstacleToDelete!!.name} ?") },
+                text = { Text("Voulez-vous vraiment supprimer ${obstacleToDelete!!.obstacle_name} ?") },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -1826,7 +1809,7 @@ fun ObstaclesScreen(navController: NavController) {
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(
-                                        text = "Nom: ${obstacle.name}",
+                                        text = "Nom: ${obstacle.obstacle_name}",
                                         style = MaterialTheme.typography.bodyLarge
                                     )
 
@@ -1887,7 +1870,7 @@ fun AddObstacleDialog(
 ) {
     val scope = rememberCoroutineScope()
 
-    var name by remember { mutableStateOf(obstacle?.name ?: "") }
+    var name by remember { mutableStateOf(obstacle?.obstacle_name ?: "") }
     var errorMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(obstacle) {
@@ -1918,7 +1901,7 @@ fun AddObstacleDialog(
 
                         val updatedObstacle = Obstacles(
                             id = obstacle?.id ?: 0,
-                            name = name
+                            obstacle_name = name
                         )
 
                         scope.launch {
