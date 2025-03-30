@@ -291,8 +291,8 @@ data class CreateCourseRequest(
 )
 
 data class ObstacleCourse(
-    val id: Int,
-    val name: String,
+    val obstacle_id: Int,
+    val obstacle_name: String,
     val duration: Int, // À confirmer selon l'API
     val position: Int
 )
@@ -769,6 +769,7 @@ fun DeleteCompetitionDialog(
         }
     )
 }
+
 
 @Composable
 fun CompetitionEditDialog(
@@ -1589,6 +1590,7 @@ fun CourseObstaclesScreen(
     navController: NavController,
     courseId: Int
 ) {
+    println("courseObstaclesScreen - courseID : $courseId")
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     var courseObstacles by remember { mutableStateOf<List<ObstacleCourse>>(emptyList()) }
     var unusedObstacles by remember { mutableStateOf<List<Obstacles>>(emptyList()) }
@@ -1625,7 +1627,7 @@ fun CourseObstaclesScreen(
                     ApiClient.apiService.updateObstaclesPosition(
                         token,
                         courseId,
-                        UpdateObstaclesPositionRequest(courseObstacles.map { it.id })
+                        UpdateObstaclesPositionRequest(courseObstacles.map { it.obstacle_id })
                     )
                     tempPositions = emptyMap()
                 }
@@ -1635,7 +1637,7 @@ fun CourseObstaclesScreen(
         }
     }
     fun moveObstacleUp(obstacle: ObstacleCourse) {
-        val currentIndex = courseObstacles.indexOfFirst { it.id == obstacle.id }
+        val currentIndex = courseObstacles.indexOfFirst { it.obstacle_id == obstacle.obstacle_id }
         if (currentIndex > 0) {
             val newPosition = courseObstacles[currentIndex - 1].position
             val temp = courseObstacles.toMutableList()
@@ -1643,13 +1645,13 @@ fun CourseObstaclesScreen(
             temp[currentIndex - 1] = temp[currentIndex - 1].copy(position = obstacle.position)
             courseObstacles = temp.sortedBy { it.position }
             tempPositions = tempPositions + mapOf(
-                temp[currentIndex].id to newPosition,
-                temp[currentIndex - 1].id to obstacle.position
+                temp[currentIndex].obstacle_id to newPosition,
+                temp[currentIndex - 1].obstacle_id to obstacle.position
             )
         }
     }
     fun moveObstacleDown(obstacle: ObstacleCourse) {
-        val currentIndex = courseObstacles.indexOfFirst { it.id == obstacle.id }
+        val currentIndex = courseObstacles.indexOfFirst { it.obstacle_id == obstacle.obstacle_id }
         if (currentIndex < courseObstacles.size - 1) {
             val newPosition = courseObstacles[currentIndex + 1].position
             val temp = courseObstacles.toMutableList()
@@ -1657,8 +1659,8 @@ fun CourseObstaclesScreen(
             temp[currentIndex + 1] = temp[currentIndex + 1].copy(position = obstacle.position)
             courseObstacles = temp.sortedBy { it.position }
             tempPositions = tempPositions + mapOf(
-                temp[currentIndex].id to newPosition,
-                temp[currentIndex + 1].id to obstacle.position
+                temp[currentIndex].obstacle_id to newPosition,
+                temp[currentIndex + 1].obstacle_id to obstacle.position
             )
         }
     }
@@ -1670,7 +1672,7 @@ fun CourseObstaclesScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 // Liste des obstacles du parcours
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(courseObstacles, key = { it.id }) { obstacle ->
+                    items(courseObstacles, key = { it.obstacle_id }) { obstacle ->
                         ObstacleItem(
                             obstacle = obstacle,
                             onMoveUp = { moveObstacleUp(obstacle) },
@@ -1681,7 +1683,7 @@ fun CourseObstaclesScreen(
                                         ApiClient.apiService.removeObstacleFromCourse(
                                             token,
                                             courseId,
-                                            obstacle.id
+                                            obstacle.obstacle_id
                                         )
                                         loadObstacles()
                                     } catch (e: Exception) {
@@ -1689,8 +1691,8 @@ fun CourseObstaclesScreen(
                                     }
                                 }
                             },
-                            isFirst = courseObstacles.firstOrNull()?.id == obstacle.id,
-                            isLast = courseObstacles.lastOrNull()?.id == obstacle.id
+                            isFirst = courseObstacles.firstOrNull()?.obstacle_id == obstacle.obstacle_id,
+                            isLast = courseObstacles.lastOrNull()?.obstacle_id == obstacle.obstacle_id
                         )
                     }
                 }
@@ -1701,8 +1703,8 @@ fun CourseObstaclesScreen(
                     items(unusedObstacles) { obstacle ->
                         ObstacleItem(
                             obstacle = ObstacleCourse(
-                                id = obstacle.id,
-                                name = obstacle.name,
+                                obstacle_id = obstacle.id,
+                                obstacle_name = obstacle.name,
                                 duration = 0,
                                 position = 0
                             ),
@@ -1785,7 +1787,7 @@ fun ObstacleItem(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = obstacle.name,
+                text = obstacle.obstacle_name ?: "Nom inconnu",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
