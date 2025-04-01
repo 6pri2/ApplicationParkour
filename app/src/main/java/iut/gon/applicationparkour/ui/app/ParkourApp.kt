@@ -6,7 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import iut.gon.applicationparkour.ui.screens.ArbitrageScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionArbitrageScreen
-import iut.gon.applicationparkour.CompetitionCompetitorsScreen
+import iut.gon.applicationparkour.ui.screens.CompetitionCompetitorsScreen
 import iut.gon.applicationparkour.CompetitionCoursesScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionResultsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionScreen
