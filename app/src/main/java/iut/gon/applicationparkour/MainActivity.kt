@@ -53,11 +53,7 @@ import retrofit2.http.Path
 import kotlinx.coroutines.delay
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.graphics.Color
-import com.google.gson.annotations.SerializedName
-import iut.gon.applicationparkour.data.model.Competition
-import iut.gon.applicationparkour.data.model.Competitor
-import iut.gon.applicationparkour.data.model.Courses
-import iut.gon.applicationparkour.data.model.Obstacles
+import iut.gon.applicationparkour.data.model.*
 import retrofit2.HttpException
 
 
@@ -224,59 +220,7 @@ interface ApiService {
         @Body request: UpdateObstaclePositionRequest
     ): Response<Unit>
 
-    @PUT("courses/{courseId}/update_obstacle_position")
-    suspend fun updateSingleObstaclePosition(
-        @Header("Authorization") token: String,
-        @Path("courseId") courseId: Int,
-        @Body request: ObstaclePositionUpdate
-    ): Response<Unit>
-
 }
-data class AddCompetitorRequest(
-    @SerializedName("competitor_id")
-    val competitorId: Int
-)
-
-data class CourseUpdateRequest(
-    val name: String,
-    val max_duration: Int,
-    val position: Int,
-    val is_over: Int
-)
-
-data class CreateCourseRequest(
-    val name: String,
-    val max_duration: Int,
-    @SerializedName("competition_id")
-    val competitionId: Int
-)
-
-data class ObstacleCourse(
-    val obstacle_id: Int,
-    val obstacle_name: String,
-    val duration: Int, // À confirmer selon l'API
-    val position: Int
-)
-
-data class AddObstacleRequest(
-    @SerializedName("obstacle_id")
-    val obstacleId: Int
-)
-
-data class ObstaclePositionUpdate(
-    @SerializedName("obstacle_id")
-    val obstacleId: Int,
-    @SerializedName("position")
-    val position: Int
-)
-
-// Data class pour la requête
-data class UpdateObstaclePositionRequest(
-    @SerializedName("obstacle_id")
-    val obstacleId: Int,
-    @SerializedName("position")
-    val position: Int
-)
 
 
 // Objet singleton pour créer l'instance Retrofit

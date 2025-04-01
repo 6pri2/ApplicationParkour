@@ -1,6 +1,9 @@
 package iut.gon.applicationparkour.data.model
 
-//Data class pour représenter une course
+/**
+ * Data class pour représenter une course
+ */
+
 data class Courses(
     val id: Int,
     val name: String,

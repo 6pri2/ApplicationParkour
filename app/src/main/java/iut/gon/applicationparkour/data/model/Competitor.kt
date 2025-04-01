@@ -1,6 +1,8 @@
 package iut.gon.applicationparkour.data.model
 
-//Data class représentant un compétiteur
+/**
+ * Data class représentant un compétiteur
+ */
 
 data class Competitor(
     val id: Int,
