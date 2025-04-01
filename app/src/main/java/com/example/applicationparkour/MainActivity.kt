@@ -200,6 +200,12 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body result: ObstacleResult
     ): Response<Unit>
+
+    @GET("competitions/{id}")
+    suspend fun getCompetitionById(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int
+    ): Competition
 }
 
 
@@ -1183,27 +1189,68 @@ fun ChronometreScreen(
     competitorId: String
 ) {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    val scope = rememberCoroutineScope()
+
     var obstacles by remember { mutableStateOf<List<Obstacles>>(emptyList()) }
     var currentObstacleIndex by remember { mutableStateOf(0) }
-    var recordedTimes by remember { mutableStateOf<Map<Int, Float>>(emptyMap()) }
+    var recordedResults by remember { mutableStateOf<List<ObstacleResult>>(emptyList()) }
     var isRunning by remember { mutableStateOf(false) }
     var timeMillis by remember { mutableStateOf(0L) }
     var startTime by remember { mutableStateOf(0L) }
     var error by remember { mutableStateOf<String?>(null) }
+    var currentObstacleStartTime by remember { mutableStateOf(0L) }
+    var competition by remember { mutableStateOf<Competition?>(null) }
     val listState = rememberLazyListState()
+    var hasRecordedFallForCurrentAttempt by remember { mutableStateOf(false) }
+    var currentAttemptStartTime by remember { mutableStateOf(0L) }
+    var remainingRetries by remember { mutableStateOf(1) } // Nombre de réessais restants
+    var hasRecordedFall by remember { mutableStateOf(false) }
+    var resetTrigger by remember { mutableStateOf(0) }
+    var isCourseCompleted by remember { mutableStateOf(false) }
 
-    LaunchedEffect(recordedTimes.size) {
-        if (recordedTimes.isNotEmpty()) {
-            listState.animateScrollToItem(recordedTimes.size - 1)
+    LaunchedEffect(resetTrigger) {
+        currentObstacleIndex = 0
+        recordedResults = emptyList()
+        timeMillis = 0L
+        isRunning = false
+        remainingRetries = if (competition?.has_retry == 1) 1 else 0
+        hasRecordedFall = false
+        currentAttemptStartTime = 0L
+        isCourseCompleted = false
+    }
+
+    LaunchedEffect(recordedResults.size) {
+        if (recordedResults.isNotEmpty()) {
+            listState.animateScrollToItem(recordedResults.size - 1)
         }
     }
 
-    // Chargement des obstacles
+    LaunchedEffect(currentObstacleIndex) {
+        currentObstacleStartTime = timeMillis
+        currentAttemptStartTime = timeMillis
+        remainingRetries = if (competition?.has_retry == 1) 1 else 0
+        hasRecordedFall = false
+    }
+
+    // Calcul de l'état désactivé pour le bouton Démarrer
+    val isStartButtonDisabled = isCourseCompleted ||
+            (competition?.has_retry == 1 && remainingRetries == 0) ||
+            (competition?.has_retry != 1 && hasRecordedFall)
+
+
     LaunchedEffect(courseId) {
         try {
             obstacles = ApiClient.apiService.getCourseObstacles(token, courseId.toInt())
         } catch (e: Exception) {
             error = "Erreur de chargement des obstacles"
+        }
+    }
+
+    LaunchedEffect(competitionId) {
+        try {
+            competition = ApiClient.apiService.getCompetitionById(token, competitionId.toInt())
+        } catch (e: Exception) {
+            error = "Erreur de chargement de la compétition"
         }
     }
 
@@ -1225,11 +1272,22 @@ fun ChronometreScreen(
     fun recordObstacleTime() {
         val currentObstacle = obstacles.getOrNull(currentObstacleIndex)
         currentObstacle?.let {
-            recordedTimes = recordedTimes + (it.id to (timeMillis / 1000f))
+            val result = ObstacleResult(
+                competition_id = competitionId.toInt(),
+                course_id = courseId.toInt(),
+                competitor_id = competitorId.toInt(),
+                obstacle_id = it.id,
+                time = (timeMillis - currentObstacleStartTime) / 1000f,
+                status = "completed"
+            )
+            recordedResults = recordedResults + result
             currentObstacleIndex++
+            currentObstacleStartTime = timeMillis
 
-            // Arrêt automatique si dernier obstacle
+
+            // Désactivation automatique si dernier obstacle
             if (currentObstacleIndex >= obstacles.size) {
+                isCourseCompleted = true
                 isRunning = false
             }
         }
@@ -1245,7 +1303,6 @@ fun ChronometreScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Affichage du temps
             Text(
                 text = "$formattedTime s",
                 style = MaterialTheme.typography.displayLarge,
@@ -1253,7 +1310,6 @@ fun ChronometreScreen(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
-            // Bouton obstacle actuel
             if (obstacles.isNotEmpty() && currentObstacleIndex < obstacles.size) {
                 val obstacle = obstacles[currentObstacleIndex]
                 Button(
@@ -1268,15 +1324,15 @@ fun ChronometreScreen(
                 }
             }
 
-            // Liste des résultats avec hauteur fixe
-            if (recordedTimes.isNotEmpty()) {
+            if (recordedResults.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
                         .background(
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.medium)
+                            shape = MaterialTheme.shapes.medium
+                        )
                         .padding(8.dp)
                 ) {
                     Text(
@@ -1286,15 +1342,16 @@ fun ChronometreScreen(
                     )
 
                     LazyColumn(
-                        state = listState, // État de défilement
+                        state = listState,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        itemsIndexed(recordedTimes.toList()) { index, (id, time) ->
-                            val obstacle = obstacles.find { it.id == id }
+                        itemsIndexed(recordedResults) { index, result ->
+                            val obstacle = obstacles.find { it.id == result.obstacle_id }
                             ListItem(
                                 headlineContent = {
                                     Text(
-                                        "${index + 1}. ${obstacle?.obstacle_name ?: "Inconnu"} : ${"%.1f".format(time)}s",
+                                        "${index + 1}. ${obstacle?.obstacle_name ?: "Inconnu"} : " +
+                                                "${"%.1f".format(result.time)}s (${result.status})",
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 },
@@ -1310,28 +1367,97 @@ fun ChronometreScreen(
                 }
             }
 
-            // Contrôles en bas de l'écran
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                // Bouton Start/Stop
                 Button(
-                    onClick = { isRunning = !isRunning },
+                    onClick = {
+                        if (!isRunning && !isCourseCompleted) {
+                            // Nouveau démarrage uniquement si course non terminée
+                            isRunning = true
+                        } else {
+                            // Arrêt possible à tout moment
+                            isRunning = false
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isRunning) MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.primary
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = when {
+                        isCourseCompleted -> false // Désactivé si course terminée
+                        isRunning -> true // Toujours activé en mode "Arrêter"
+                        else -> !isStartButtonDisabled // Logique normale en mode "Démarrer"
+                    }
                 ) {
                     Text(if (isRunning) "Arrêter" else "Démarrer")
                 }
 
+
+                // Bouton Chute
                 Button(
                     onClick = {
-                        isRunning = false
-                        timeMillis = 0L
-                        currentObstacleIndex = 0
-                        recordedTimes = emptyMap()
+                        val currentObstacle = obstacles.getOrNull(currentObstacleIndex)
+                        currentObstacle?.let {
+                            // Enregistrement de la chute
+                            val result = ObstacleResult(
+                                competition_id = competitionId.toInt(),
+                                course_id = courseId.toInt(),
+                                competitor_id = competitorId.toInt(),
+                                obstacle_id = it.id,
+                                time = (timeMillis - currentAttemptStartTime) / 1000f,
+                                status = "failed"
+                            )
+                            recordedResults = recordedResults + result
+
+                            if (competition?.has_retry != 1 || remainingRetries == 0) {
+                                isCourseCompleted = true
+                            }
+
+                            if (competition?.has_retry == 1 && remainingRetries > 0) {
+                                remainingRetries--
+                                timeMillis = currentAttemptStartTime
+                            } else {
+                                isRunning = false
+                                hasRecordedFall = true
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Chute ${if (competition?.has_retry == 1) "($remainingRetries)" else ""}")
+                }
+
+                LaunchedEffect(currentObstacleIndex) {
+                    hasRecordedFallForCurrentAttempt = false
+                }
+
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                recordedResults.forEach { result ->
+                                    ApiClient.apiService.saveObstacleResult(token, result)
+                                }
+                                error = "Résultats sauvegardés avec succès"
+                            } catch (e: Exception) {
+                                error = "Erreur lors de la sauvegarde: ${e.message}"
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = recordedResults.isNotEmpty() && !isRunning
+                ) {
+                    Text("Sauvegarder les résultats")
+                }
+
+                // Modifier le bouton Réinitialiser
+                Button(
+                    onClick = {
+                        resetTrigger++ // Incrémenter pour déclencher la réinitialisation
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1339,7 +1465,6 @@ fun ChronometreScreen(
                 }
             }
 
-            // Message de fin
             if (currentObstacleIndex >= obstacles.size) {
                 Text(
                     text = "Course terminée !",
