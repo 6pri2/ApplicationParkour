@@ -73,82 +73,23 @@ interface ApiService {
     @GET("obstacles")
     suspend fun getObstacles(@Header("Authorization") token: String): List<Obstacles>
 
-    @POST("obstacles")
-    suspend fun addObstacles(
+    @GET("courses/{id}/obstacles")
+    suspend fun getCourseObstacles(
         @Header("Authorization") token: String,
-        @Body obstacles: Obstacles
-    ): Obstacles
+        @Path("id") courseId: Int
+    ): List<ObstacleCourse>
 
-    @POST("competitors")
-    suspend fun addCompetitor(
+    @GET("courses/{id}/unused_obstacles")
+    suspend fun getUnusedObstacles(
         @Header("Authorization") token: String,
-        @Body competitor: Competitor
-    ): Competitor
-
-    @DELETE("competitors/{id}")
-    suspend fun deleteCompetitor(
-        @Header("Authorization") token: String,
-        @Path("id") competitorId: Int
-    ): Response<Unit>
-
-    @DELETE("obstacles/{id}")
-    suspend fun deleteObstacles(
-        @Header("Authorization") token: String,
-        @Path("id") obstaclesId: Int
-    ): Response<Unit>
-
-    @PUT("competitors/{id}")
-    suspend fun updateCompetitor(
-        @Header("Authorization") token: String,
-        @Path("id") competitorId: Int,
-        @Body competitor: Competitor
-    ): Competitor
-
-    @PUT("obstacles/{id}")
-    suspend fun updateObstacles(
-        @Header("Authorization") token: String,
-        @Path("id") obstaclesId: Int,
-        @Body obstacles: Obstacles
-    ): Obstacles
-
-    @POST("competitions")
-    suspend fun addCompetition(
-        @Header("Authorization") token: String,
-        @Body competition: Competition
-    ): Competition
-
-    @PUT("competitions/{id}")
-    suspend fun updateCompetition(
-        @Header("Authorization") token: String,
-        @Path("id") competitionId: Int,
-        @Body competition: Competition
-    ): Competition
-
-    @DELETE("competitions/{id}")
-    suspend fun deleteCompetition(
-        @Header("Authorization") token: String,
-        @Path("id") competitionId: Int
-    ): Response<Unit>
+        @Path("id") courseId: Int
+    ): List<Obstacles>
 
     @GET("competitions/{id}/inscriptions")
     suspend fun getCompetitorsByCompetition(
         @Header("Authorization") token: String,
         @Path("id") competitionId: Int
     ): List<Competitor>
-
-        @DELETE("competitions/{id}/remove_competitor/{id_competitor}")
-        suspend fun removeCompetitorFromCompetition(
-            @Header("Authorization") token: String,
-            @Path("id") competitionId: Int,
-            @Path("id_competitor") competitorId: Int
-        ): Response<Unit>
-
-    @POST("competitions/{id}/add_competitor")
-    suspend fun addCompetitorToCompetition(
-        @Header("Authorization") token: String,
-        @Path("id") competitionId: Int,
-        @Body competitorId: AddCompetitorRequest
-    ): Response<Unit>
 
     @GET("competitions/{id}")
     suspend fun getCompetitionDetails(
@@ -167,13 +108,32 @@ interface ApiService {
         @Path("id") competitionId: Int
     ): List<Courses>
 
-    // Ajoute ces méthodes dans ton interface ApiService
-    @PUT("courses/{id}")
-    suspend fun updateCourse(
+    @POST("obstacles")
+    suspend fun addObstacles(
         @Header("Authorization") token: String,
-        @Path("id") courseId: Int,
-        @Body course: CourseUpdateRequest
-    ): Courses
+        @Body obstacles: Obstacles
+    ): Obstacles
+
+    @POST("competitors")
+    suspend fun addCompetitor(
+        @Header("Authorization") token: String,
+        @Body competitor: Competitor
+    ): Competitor
+
+    @POST("competitions")
+    suspend fun addCompetition(
+        @Header("Authorization") token: String,
+        @Body competition: Competition
+    ): Competition
+
+
+
+    @POST("competitions/{id}/add_competitor")
+    suspend fun addCompetitorToCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int,
+        @Body competitorId: AddCompetitorRequest
+    ): Response<Unit>
 
     @POST("courses")
     suspend fun addCourse(
@@ -181,29 +141,49 @@ interface ApiService {
         @Body course: CreateCourseRequest
     ): Courses
 
-    @DELETE("courses/{id}")
-    suspend fun deleteCourse(
-        @Header("Authorization") token: String,
-        @Path("id") courseId: Int
-    ): Response<Unit>
-
-    @GET("courses/{id}/obstacles")
-    suspend fun getCourseObstacles(
-        @Header("Authorization") token: String,
-        @Path("id") courseId: Int
-    ): List<ObstacleCourse>
-
-    @GET("courses/{id}/unused_obstacles")
-    suspend fun getUnusedObstacles(
-        @Header("Authorization") token: String,
-        @Path("id") courseId: Int
-    ): List<Obstacles>
-
     @POST("courses/{courseId}/add_obstacle")
     suspend fun addObstacleToCourse(
         @Header("Authorization") token: String,
         @Path("courseId") courseId: Int,
         @Body request: AddObstacleRequest
+    ): Response<Unit>
+
+    @POST("courses/{courseId}/update_obstacle_position")
+    suspend fun updateObstaclePosition(
+        @Header("Authorization") token: String,
+        @Path("courseId") courseId: Int,
+        @Body request: UpdateObstaclePositionRequest
+    ): Response<Unit>
+
+    @DELETE("competitors/{id}")
+    suspend fun deleteCompetitor(
+        @Header("Authorization") token: String,
+        @Path("id") competitorId: Int
+    ): Response<Unit>
+
+    @DELETE("obstacles/{id}")
+    suspend fun deleteObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") obstaclesId: Int
+    ): Response<Unit>
+
+    @DELETE("competitions/{id}")
+    suspend fun deleteCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int
+    ): Response<Unit>
+
+    @DELETE("competitions/{id}/remove_competitor/{id_competitor}")
+    suspend fun removeCompetitorFromCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int,
+        @Path("id_competitor") competitorId: Int
+    ): Response<Unit>
+
+    @DELETE("courses/{id}")
+    suspend fun deleteCourse(
+        @Header("Authorization") token: String,
+        @Path("id") courseId: Int
     ): Response<Unit>
 
     @DELETE("courses/{courseId}/remove_obstacle/{obstacleId}")
@@ -213,12 +193,33 @@ interface ApiService {
         @Path("obstacleId") obstacleId: Int
     ): Response<Unit>
 
-    @POST("courses/{courseId}/update_obstacle_position")
-    suspend fun updateObstaclePosition(
+    @PUT("competitors/{id}")
+    suspend fun updateCompetitor(
         @Header("Authorization") token: String,
-        @Path("courseId") courseId: Int,
-        @Body request: UpdateObstaclePositionRequest
-    ): Response<Unit>
+        @Path("id") competitorId: Int,
+        @Body competitor: Competitor
+    ): Competitor
+
+    @PUT("obstacles/{id}")
+    suspend fun updateObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") obstaclesId: Int,
+        @Body obstacles: Obstacles
+    ): Obstacles
+
+    @PUT("competitions/{id}")
+    suspend fun updateCompetition(
+        @Header("Authorization") token: String,
+        @Path("id") competitionId: Int,
+        @Body competition: Competition
+    ): Competition
+
+    @PUT("courses/{id}")
+    suspend fun updateCourse(
+        @Header("Authorization") token: String,
+        @Path("id") courseId: Int,
+        @Body course: CourseUpdateRequest
+    ): Courses
 
 }
 
