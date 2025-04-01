@@ -456,6 +456,13 @@ fun WelcomeScreen(navController: NavController) {
             Text("Compétitions")
         }
 
+        Button(
+            onClick = {navController.navigate("obstacles")},
+            modifier = buttonModifier
+        ){
+            Text("Obstacles")
+        }
+
         // Ajoutez les autres boutons de la même manière
     }
 }
