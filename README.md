@@ -15,7 +15,7 @@ Application Android pour l'arbitrage des compétitions de parkour (type Ninja Wa
   - Filtrage par éligibilité (âge, genre)
 
 - **Arbitrage en temps réel** :
-  - Chronométrage précis au 1/10ème de seconde
+  - Chronométrage précis au 10ème de seconde
   - Gestion des chutes et reprises
   - Calcul automatique des classements
 
