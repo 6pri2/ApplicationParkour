@@ -33,7 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import iut.gon.applicationparkour.AddObstacleDialog
+import iut.gon.applicationparkour.ui.components.obstacle.AddObstacleDialog
 import iut.gon.applicationparkour.data.api.ApiClient
 import iut.gon.applicationparkour.data.model.Obstacles
 import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold

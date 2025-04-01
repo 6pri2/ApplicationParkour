@@ -6,24 +6,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -32,11 +24,13 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.Period
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.ui.graphics.Color
 import iut.gon.applicationparkour.data.api.ApiClient
 import iut.gon.applicationparkour.data.model.*
 import iut.gon.applicationparkour.ui.app.ParkourApp
+import iut.gon.applicationparkour.ui.components.courses.CourseAddDialog
 import iut.gon.applicationparkour.ui.components.courses.CourseEditDialog
+import iut.gon.applicationparkour.ui.components.courses.CourseItemModif
+import iut.gon.applicationparkour.ui.components.obstacle.ObstacleItem
 import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold
 
 // --- Activité principale ---
@@ -439,7 +433,7 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                         )
 
                         // 2. Rediriger vers la gestion des obstacles
-                        navController.navigate("courseObstacles/${createdCourse.id}"){
+                        navController.navigate("courseObstacles/${createdCourse.id}") {
                             launchSingleTop = true
                         }
 
@@ -859,361 +853,6 @@ fun CourseObstaclesScreen(
 }
 
 
-@Composable
-fun ObstacleItem(
-    obstacle: ObstacleCourse,
-    onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null,
-    onDelete: (() -> Unit)? = null,
-    onAdd: (() -> Unit)? = null,
-    isFirst: Boolean = false,
-    isLast: Boolean = false,
-    isOnlyObstacle: Boolean = false
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = obstacle.obstacle_name ?: "Nom inconnu",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            if (obstacle.position > 0) {
-                Text(text = "Position: ${obstacle.position}")
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Boutons de déplacement (seulement pour les obstacles du parcours)
-                if (onMoveUp != null && onMoveDown != null) {
-                    Row {
-                        IconButton(
-                            onClick = onMoveUp,
-                            enabled = !isFirst
-                        ) {
-                            Icon(
-                                Icons.Default.ArrowUpward,
-                                contentDescription = "Monter",
-                                tint = if (isFirst) Color.Gray else MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        IconButton(
-                            onClick = onMoveDown,
-                            enabled = !isLast
-                        ) {
-                            Icon(
-                                Icons.Default.ArrowDownward,
-                                contentDescription = "Descendre",
-                                tint = if (isLast) Color.Gray else MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-
-                // Bouton d'action (suppression ou ajout)
-                Row {
-                    if (onDelete != null) {
-                        IconButton(
-                            onClick = onDelete ?: {},
-                            enabled = !isOnlyObstacle  // Désactiver si c'est le dernier obstacle
-                        ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                "Supprimer",
-                                tint = if (isOnlyObstacle) Color.Gray else MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                    if (onAdd != null) {
-                        IconButton(onClick = onAdd) {
-                            Icon(
-                                Icons.Default.Add,
-                                "Ajouter",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun CourseAddDialog(
-    competitionId: String,
-    onDismiss: () -> Unit,
-    onSave: (Courses) -> Unit,
-    defaultPosition: Int
-) {
-    var name by remember { mutableStateOf("") }
-    var maxDuration by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Ajouter un parcours") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nom") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = maxDuration,
-                    onValueChange = { if (it.all { c -> c.isDigit() }) maxDuration = it },
-                    label = { Text("Durée maximale (secondes)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val newCourse = Courses(
-                        id = 0,  // L'ID sera généré par le serveur
-                        name = name,
-                        max_duration = maxDuration.toIntOrNull() ?: 0,
-                        position = defaultPosition,
-                        is_over = 0,
-                        competition_id = competitionId.toInt()
-                    )
-                    onSave(newCourse)
-                },
-                enabled = name.isNotBlank() && maxDuration.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Ajouter et gérer les obstacles")
-            }
-        }
-
-    )
-}
-
-@Composable
-fun CourseItemModif(
-    course: Courses,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    isFirst: Boolean,
-    isLast: Boolean,
-    isOnlyCourse: Boolean
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = course.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Durée max: ${course.max_duration} secondes")
-            Text(text = "Position: ${course.position}")
-            Text(text = "Statut: ${if (course.is_over == 1) "Terminé" else "En cours"}")
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Boutons de déplacement
-                Row {
-                    IconButton(
-                        onClick = onMoveUp,
-                        enabled = !isFirst
-                    ) {
-                        Icon(
-                            Icons.Default.ArrowUpward,
-                            contentDescription = "Monter",
-                            tint = if (isFirst) Color.Gray else MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(
-                        onClick = onMoveDown,
-                        enabled = !isLast
-                    ) {
-                        Icon(
-                            Icons.Default.ArrowDownward,
-                            contentDescription = "Descendre",
-                            tint = if (isLast) Color.Gray else MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-
-                // Boutons d'édition/suppression
-                Row {
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, "Modifier")
-                    }
-                    IconButton(
-                        onClick = onDelete,
-                        enabled = !isOnlyCourse
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            "Supprimer",
-                            tint = if (isOnlyCourse ) Color.Gray else MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun AddCompetitorDialog(
-    token: String,
-    competitor: Competitor? = null, // Si un compétiteur est passé, on le modifie
-    onDismiss: () -> Unit,
-    onCompetitorsUpdated: () -> Unit // Callback pour mettre à jour la liste des compétiteurs
-) {
-    val scope = rememberCoroutineScope()
-
-    // Si nous sommes en mode modification, pré-remplir les champs
-    var firstName by remember { mutableStateOf(competitor?.first_name ?: "") }
-    var lastName by remember { mutableStateOf(competitor?.last_name ?: "") }
-    var email by remember { mutableStateOf(competitor?.email ?: "") }
-    var phone by remember { mutableStateOf(competitor?.phone ?: "") }
-    var gender by remember { mutableStateOf(competitor?.gender ?: "H") }
-    var birthDate by remember { mutableStateOf(competitor?.born_at ?: "") }
-
-    // Reset des valeurs quand la fenêtre est fermée
-    LaunchedEffect(competitor) {
-        if (competitor == null) {
-            // Si aucun compétiteur n'est passé, réinitialiser les champs
-            firstName = ""
-            lastName = ""
-            email = ""
-            phone = ""
-            gender = "H"
-            birthDate = ""
-        }
-    }
-
-    // Variable pour afficher le message d'erreur
-    var errorMessage by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (competitor == null) "Ajouter un compétiteur" else "Modifier un compétiteur") },
-        text = {
-            Column {
-                OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("Prénom") })
-                OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("Nom") })
-                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Téléphone") })
-                OutlinedTextField(value = birthDate, onValueChange = { birthDate = it }, label = { Text("Date de naissance (YYYY-MM-DD)") })
-
-                Text("Genre:")
-                Row {
-                    RadioButton(
-                        selected = gender == "H",
-                        onClick = { gender = "H" }
-                    )
-                    Text("Homme", modifier = Modifier.padding(start = 8.dp))
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    RadioButton(
-                        selected = gender == "F",
-                        onClick = { gender = "F" }
-                    )
-                    Text("Femme", modifier = Modifier.padding(start = 8.dp))
-                }
-
-                // Affichage du message d'erreur si les champs ne sont pas remplis
-                if (errorMessage.isNotEmpty()) {
-                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    // Validation des champs
-                    if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty() || birthDate.isEmpty()) {
-                        errorMessage = "Tous les champs doivent être remplis"
-                    } else {
-                        errorMessage = ""
-
-                        // Créer un nouveau compétiteur sans l'ID
-                        val updatedCompetitor = Competitor(
-                            id = competitor?.id ?: 0, // Si modification, utiliser l'ID existant
-                            first_name = firstName,
-                            last_name = lastName,
-                            email = email,
-                            gender = gender,
-                            phone = phone,
-                            born_at = birthDate
-                        )
-
-                        scope.launch {
-                            try {
-                                if (competitor == null) {
-                                    // Ajout d'un nouveau compétiteur
-                                    ApiClient.apiService.addCompetitor(token, updatedCompetitor)
-
-                                } else {
-                                    // Mise à jour du compétiteur
-                                    ApiClient.apiService.updateCompetitor(token, updatedCompetitor.id, updatedCompetitor)
-                                }
-                                onCompetitorsUpdated() // Mettre à jour la liste des compétiteurs
-                                onDismiss() // Fermer la fenêtre
-
-                            } catch (e: Exception) {
-                                println("Erreur : ${e.message}")
-                            }
-                        }
-                    }
-                }
-            ) {
-                Text(if (competitor == null) "Ajouter" else "Modifier")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) { Text("Annuler") }
-        }
-    )
-}
-
-
-@Composable
-fun CompetitorCard(competitor: Competitor) {
-    val fullName = "${competitor.first_name} ${competitor.last_name}"
-    val age = calculateAge(competitor.born_at)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Nom: $fullName", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Âge: $age ans")
-            Text(text = "Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
-        }
-    }
-}
-
 fun calculateAge(bornAt: String): Int {
     // Convertir la date de naissance en LocalDate
     val birthDate = LocalDate.parse(bornAt)
@@ -1224,74 +863,6 @@ fun calculateAge(bornAt: String): Int {
     return age
 }
 
-
-@Composable
-fun AddObstacleDialog(
-    token: String,
-    obstacle: Obstacles? = null,
-    onDismiss: () -> Unit,
-    onObstaclesUpdated: () -> Unit
-) {
-    val scope = rememberCoroutineScope()
-
-    var name by remember { mutableStateOf(obstacle?.name ?: "") }
-    var errorMessage by remember { mutableStateOf("") }
-
-    LaunchedEffect(obstacle) {
-        if (obstacle == null) {
-            name = ""
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (obstacle == null) "Ajouter un obstacle" else "Modifier un obstacle") },
-        text = {
-            Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nom") })
-
-                if (errorMessage.isNotEmpty()) {
-                    Text(text = errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (name.isEmpty()) {
-                        errorMessage = "Le nom est requis"
-                    } else {
-                        errorMessage = ""
-
-                        val updatedObstacle = Obstacles(
-                            id = obstacle?.id ?: 0,
-                            name = name
-                        )
-
-                        scope.launch {
-                            try {
-                                if (obstacle == null) {
-                                    ApiClient.apiService.addObstacles(token, updatedObstacle)
-                                } else {
-                                    ApiClient.apiService.updateObstacles(token, updatedObstacle.id, updatedObstacle)
-                                }
-                                onObstaclesUpdated()
-                                onDismiss()
-                            } catch (e: Exception) {
-                                println("Erreur : ${e.message}")
-                            }
-                        }
-                    }
-                }
-            ) {
-                Text(if (obstacle == null) "Ajouter" else "Modifier")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) { Text("Annuler") }
-        }
-    )
-}
 
 @Preview(showBackground = true)
 @Composable

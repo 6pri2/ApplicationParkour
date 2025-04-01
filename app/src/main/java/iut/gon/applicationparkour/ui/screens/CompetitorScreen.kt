@@ -33,7 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import iut.gon.applicationparkour.AddCompetitorDialog
+import iut.gon.applicationparkour.ui.components.competitor.AddCompetitorDialog
 import iut.gon.applicationparkour.calculateAge
 import iut.gon.applicationparkour.data.api.ApiClient
 import iut.gon.applicationparkour.data.model.Competitor
