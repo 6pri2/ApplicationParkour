@@ -1,14 +1,10 @@
-package com.example.applicationparkour
+package iut.gon.applicationparkour
 
-import android.graphics.Picture
 import android.os.Bundle
-import android.os.Debug
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,22 +13,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sports
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,7 +36,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.applicationparkour.ui.theme.ApplicationParkourTheme
+import iut.gon.applicationparkour.ui.theme.ApplicationParkourTheme
 import kotlinx.coroutines.launch
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -59,17 +50,11 @@ import retrofit2.http.DELETE
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
-import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
-import androidx.compose.material.icons.filled.Sports
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.zIndex
 import com.google.gson.annotations.SerializedName
-import kotlinx.coroutines.coroutineScope
+import retrofit2.HttpException
 
 
 // --- Configuration Retrofit ---
@@ -1000,7 +985,7 @@ fun CompetitionEditDialog(
                                         println("Réponse: $response")
                                     }
                                     onSave(updatedCompetition)
-                                } catch (e: retrofit2.HttpException) {
+                                } catch (e: HttpException) {
                                     val errorBody = e.response()?.errorBody()?.string()
                                     println("Erreur 422: $errorBody")
                                     // Affichez un message à l'utilisateur

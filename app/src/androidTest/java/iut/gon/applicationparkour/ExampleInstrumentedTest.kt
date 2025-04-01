@@ -1,4 +1,4 @@
-package com.example.applicationparkour
+package iut.gon.applicationparkour
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

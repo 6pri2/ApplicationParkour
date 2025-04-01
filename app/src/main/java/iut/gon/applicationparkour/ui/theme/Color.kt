@@ -1,4 +1,4 @@
-package com.example.applicationparkour.ui.theme
+package iut.gon.applicationparkour.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

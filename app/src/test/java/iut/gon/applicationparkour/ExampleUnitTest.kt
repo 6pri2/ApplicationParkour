@@ -1,4 +1,4 @@
-package com.example.applicationparkour
+package iut.gon.applicationparkour
 
 import org.junit.Test
 
