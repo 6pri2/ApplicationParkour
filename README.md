@@ -15,7 +15,7 @@ Application Android pour l'arbitrage des compétitions de parkour (type Ninja Wa
   - Filtrage par éligibilité (âge, genre)
 
 - **Arbitrage en temps réel** :
-  - Chronométrage précis au 10ème de seconde
+  - Chronométrage précis au 1/10ème de seconde
   - Gestion des chutes et reprises
   - Calcul automatique des classements
 
@@ -23,15 +23,17 @@ Application Android pour l'arbitrage des compétitions de parkour (type Ninja Wa
   - Stockage local pour un arbitrage sans latence
   - Synchronisation avec le serveur distant aux moments opportuns
 
-## 📱 Interfaces clés
+## 📱 Navigation principale
 
 ```mermaid
 graph TD
-    A[Accueil] --> B[Liste Compétitions]
-    B --> C[Création Compétition]
-    B --> D[Détails Compétition]
-    D --> E[Parcours]
-    D --> F[Concurrents]
-    D --> G[Arbitrage]
-    G --> H[Chronomètre Obstacle]
-    G --> I[Classement]
+    A[Accueil] --> B[[Créer Compétition]]
+    A --> C[[Arbitrer Compétition]]
+    B --> D[Liste Compétitions]
+    C --> D
+    D --> E[Détails Compétition]
+    E --> F[Parcours]
+    E --> G[Concurrents]
+    E --> H[Arbitrage]
+    H --> I[Chronomètre Obstacle]
+    H --> J[Classement]
