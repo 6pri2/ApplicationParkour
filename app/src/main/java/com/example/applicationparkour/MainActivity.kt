@@ -380,7 +380,7 @@ fun ParkourApp() {
         }
         composable("competitors/{competitionId}") { backStackEntry ->
             val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
-            CompetitionCompetitorsScreen(navController, competitionId)
+            CompetitionCompetitorsScreen(navController, competitionId.toInt())
         }
 
         composable("results/{competitionId}") { backStackEntry ->
@@ -1025,7 +1025,7 @@ fun CompetitionEditDialog(
 }
 
 @Composable
-fun CompetitionCompetitorsScreen(navController: NavController, competitionId: String) {
+fun CompetitionCompetitorsScreen(navController: NavController, competitionId: Int) {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
     var allCompetitors by remember { mutableStateOf<List<Competitor>?>(null) }
@@ -1037,10 +1037,10 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: St
     var selectedCompetitors by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Chargement initial des données
+
     LaunchedEffect(competitionId) {
         try {
-            val compId = competitionId.toInt()
+            val compId = competitionId
             competition = ApiClient.apiService.getCompetitionDetails(token, compId)
             competitors = ApiClient.apiService.getCompetitorsByCompetition(token, compId)
             allCompetitors = ApiClient.apiService.getAllCompetitors(token)
@@ -1050,8 +1050,6 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: St
             isLoading = false
         }
     }
-
-    // Filtrer les compétiteurs éligibles
     val eligibleCompetitors = allCompetitors?.filter { competitor ->
         val age = calculateAge(competitor.born_at)
         val genderMatch = competition?.gender == "Tous" || competitor.gender == competition?.gender
@@ -1060,8 +1058,6 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: St
 
         genderMatch && ageMatch && notRegistered
     }
-
-    // Boîte de dialogue de confirmation de suppression
     if (competitorToDelete != null) {
         val competitor = competitorToDelete!!
         AlertDialog(
@@ -1075,7 +1071,7 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: St
                             try {
                                 ApiClient.apiService.removeCompetitorFromCompetition(
                                     token,
-                                    competitionId.toInt(),
+                                    competitionId,
                                     competitor.id
                                 )
                                 competitors = competitors?.filter { it.id != competitor.id }
@@ -1097,8 +1093,6 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: St
             }
         )
     }
-
-    // Boîte de dialogue pour ajouter des compétiteurs
     if (showAddDialog && eligibleCompetitors != null) {
         AlertDialog(
             onDismissRequest = {
@@ -1139,25 +1133,21 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: St
                     onClick = {
                         coroutineScope.launch {
                             try {
-                                // Créer une nouvelle liste avec les nouveaux compétiteurs en premier
                                 val newCompetitors = mutableListOf<Competitor>()
 
                                 selectedCompetitors.forEach { competitorId ->
                                     val response = ApiClient.apiService.addCompetitorToCompetition(
                                         token,
-                                        competitionId.toInt(),
+                                        competitionId,
                                         AddCompetitorRequest(competitorId)
                                     )
 
                                     if (response.isSuccessful) {
-                                        // Trouver le compétiteur dans allCompetitors et l'ajouter en tête
                                         allCompetitors?.find { it.id == competitorId }?.let { newCompetitor ->
                                             newCompetitors.add(newCompetitor)
                                         }
                                     }
                                 }
-
-                                // Mettre à jour la liste avec les nouveaux en premier
                                 competitors = newCompetitors + (competitors ?: emptyList())
 
                                 selectedCompetitors = emptySet()
