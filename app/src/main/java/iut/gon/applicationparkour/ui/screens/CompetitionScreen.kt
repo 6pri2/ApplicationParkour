@@ -30,9 +30,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import iut.gon.applicationparkour.CompetitionEditDialog
-import iut.gon.applicationparkour.CompetitionItem
-import iut.gon.applicationparkour.DeleteCompetitionDialog
+import iut.gon.applicationparkour.ui.components.competition.CompetitionEditDialog
+import iut.gon.applicationparkour.ui.components.competition.CompetitionItem
+import iut.gon.applicationparkour.ui.components.competition.DeleteCompetitionDialog
 import iut.gon.applicationparkour.data.api.ApiClient
 import iut.gon.applicationparkour.data.model.Competition
 import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold
