@@ -10,13 +10,13 @@ import iut.gon.applicationparkour.CompetitionArbitrageScreen
 import iut.gon.applicationparkour.CompetitionCompetitorsScreen
 import iut.gon.applicationparkour.CompetitionCoursesScreen
 import iut.gon.applicationparkour.CompetitionResultsScreen
-import iut.gon.applicationparkour.CompetitionScreen
+import iut.gon.applicationparkour.ui.screens.CompetitionScreen
 import iut.gon.applicationparkour.CompetitorScreen
 import iut.gon.applicationparkour.CourseObstaclesScreen
 import iut.gon.applicationparkour.CoursesScreen
 import iut.gon.applicationparkour.ObstaclesScreen
 import iut.gon.applicationparkour.ResultScreen
-import iut.gon.applicationparkour.WelcomeScreen
+import iut.gon.applicationparkour.ui.screens.WelcomeScreen
 
 @Composable
 fun ParkourApp() {
