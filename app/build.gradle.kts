@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.applicationparkour"
+    namespace = "iut.gon.applicationparkour"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.applicationparkour"
+        applicationId = "iut.gon.applicationparkour"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
