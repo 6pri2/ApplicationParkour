@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -102,16 +103,16 @@ data class ObstacleResult(
     val course_id: Int,
     val competitor_id: Int,
     val obstacle_id: Int,
-    val time: Float, // Temps en secondes avec décimales
-    val status: String // "completed" ou "failed"
+    val time: Int, // 1/10èmes de seconde (45 = 4.5s)
+    val status: String
 )
 
 data class Performance(
     val competition_id: Int,
     val course_id: Int,
     val competitor_id: Int,
-    val total_time: Float,
-    val status: String // "completed" ou "failed"
+    val total_time: Int, // 1/10èmes de seconde (123 = 12.3s)
+    val status: String
 )
 
 data class PerformanceResponse(
@@ -231,6 +232,12 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") courseId: Int
     ): Courses
+
+    @GET("performances/{id}")
+    suspend fun getPerformanceById(
+        @Header("Authorization") token: String,
+        @Path("id") performanceId: Int
+    ): PerformanceResponse
 }
 
 
@@ -381,7 +388,7 @@ fun ScreenScaffold(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 }
             )
@@ -1234,7 +1241,65 @@ fun ChronometreScreen(
     var isCourseCompleted by remember { mutableStateOf(false) }
     var performanceStatus by remember { mutableStateOf<PerformanceResponse?>(null) }
     var course by remember { mutableStateOf<Courses?>(null) }
+    // Ajouter ces états
+    var savedPerformance by remember { mutableStateOf<PerformanceResponse?>(null) }
 
+    // Ajouter ces 3 variables
+    var isSaving by remember { mutableStateOf(false) }
+    var showPerformanceDialog by remember { mutableStateOf(false) }
+    var apiErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    var isLoadingObstacles by remember { mutableStateOf(true) }
+
+    fun handleSaveResults() {
+        scope.launch {
+            isSaving = true
+            apiErrorMessage = null
+
+            try {
+                // Sauvegarder les résultats d'obstacles d'abord
+                recordedResults.forEach {
+                    // Convertir le statut des obstacles si nécessaire
+                    val obstacleStatus = when(it.status) {
+                        "failed" -> "defection" // Ou la valeur appropriée
+                        else -> "to_verify" // Valeur par défaut
+                    }
+                    ApiClient.apiService.saveObstacleResult(token, it.copy(status = obstacleStatus))
+                }
+
+                // Calculer le statut global de la performance
+                val totalTenths = recordedResults.sumOf { it.time }
+
+                // Déterminer le statut selon les règles métier
+                val globalStatus = when {
+                    recordedResults.any { it.status == "defection" } -> "defection"
+                    currentObstacleIndex < obstacles.size -> "to_finish"
+                    else -> "to_verify" // Tous les obstacles terminés
+                }
+
+                // Créer la performance avec le bon statut
+                val performanceResponse = ApiClient.apiService.createPerformance(
+                    token,
+                    Performance(
+                        competitionId.toInt(),
+                        courseId.toInt(),
+                        competitorId.toInt(),
+                        totalTenths,
+                        globalStatus // Utiliser la valeur correcte
+                    )
+                )
+
+                savedPerformance = performanceResponse
+                showPerformanceDialog = true
+                resetTrigger++
+
+            } catch (e: Exception) {
+                apiErrorMessage = "Erreur API : ${e.message?.substringBefore("\n") ?: "Code statut invalide"}"
+            } finally {
+                isSaving = false
+            }
+        }
+    }
 
     LaunchedEffect(courseId) {
         try {
@@ -1248,18 +1313,24 @@ fun ChronometreScreen(
     LaunchedEffect(isRunning, timeMillis) {
         if (isRunning) {
             course?.max_duration?.let { maxDuration ->
-                val maxDurationMillis = maxDuration * 1000L
+                // Convertir la durée max en millisecondes (maxDuration est en dixièmes de seconde)
+                val maxDurationMillis = maxDuration * 100L // Ex: 120 dixièmes (12.0s) → 12000ms
+
                 if (timeMillis >= maxDurationMillis) {
-                    // Temps dépassé : arrêt automatique
+                    // Arrêter le chrono
                     isRunning = false
+
                     val currentObstacle = obstacles.getOrNull(currentObstacleIndex)
                     currentObstacle?.let {
+                        // Calculer le temps en dixièmes de seconde (Int)
+                        val timeTenths = ((timeMillis - currentAttemptStartTime) / 100).toInt()
+
                         val result = ObstacleResult(
                             competition_id = competitionId.toInt(),
                             course_id = courseId.toInt(),
                             competitor_id = competitorId.toInt(),
                             obstacle_id = it.id,
-                            time = (timeMillis - currentAttemptStartTime) / 1000f,
+                            time = timeTenths, // Envoyé en Int
                             status = "failed"
                         )
                         recordedResults = recordedResults + result
@@ -1302,24 +1373,31 @@ fun ChronometreScreen(
 
 
     LaunchedEffect(courseId) {
+        isLoadingObstacles = true
         try {
             obstacles = ApiClient.apiService.getCourseObstacles(token, courseId.toInt())
         } catch (e: Exception) {
-            error = "Erreur de chargement des obstacles"
+            error = "Erreur d'obstacles"
+        } finally {
+            isLoadingObstacles = false
         }
     }
 
     LaunchedEffect(competitionId) {
         try {
             competition = ApiClient.apiService.getCompetitionById(token, competitionId.toInt())
+            remainingRetries = if (competition?.has_retry == 1) 1 else 0
         } catch (e: Exception) {
-            error = "Erreur de chargement de la compétition"
+            error = "Erreur de compétition"
+            remainingRetries = 0
         }
     }
 
     val formattedTime by derivedStateOf {
-        val totalSeconds = timeMillis / 1000f
-        String.format("%.1f", totalSeconds)
+        val tenths = (timeMillis / 100).toInt() // Conversion en dixièmes de seconde
+        val seconds = tenths / 10
+        val tenth = tenths % 10
+        "$seconds.${tenth}s"
     }
 
     LaunchedEffect(isRunning) {
@@ -1335,20 +1413,21 @@ fun ChronometreScreen(
     fun recordObstacleTime() {
         val currentObstacle = obstacles.getOrNull(currentObstacleIndex)
         currentObstacle?.let {
+            // Convertir en dixièmes de seconde (ex: 1234ms → 12.3s → 123)
+            val timeTenths = ((timeMillis - currentObstacleStartTime) / 100).toInt()
+
             val result = ObstacleResult(
-                competition_id = competitionId.toInt(),
-                course_id = courseId.toInt(),
-                competitor_id = competitorId.toInt(),
-                obstacle_id = it.id,
-                time = (timeMillis - currentObstacleStartTime) / 1000f,
-                status = "completed"
+                competitionId.toInt(),
+                courseId.toInt(),
+                competitorId.toInt(),
+                it.id,
+                timeTenths, // Stocké en Int
+                "completed"
             )
             recordedResults = recordedResults + result
             currentObstacleIndex++
             currentObstacleStartTime = timeMillis
 
-
-            // Désactivation automatique si dernier obstacle
             if (currentObstacleIndex >= obstacles.size) {
                 isCourseCompleted = true
                 isRunning = false
@@ -1367,7 +1446,7 @@ fun ChronometreScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "$formattedTime s",
+                text = "$formattedTime ",
                 style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -1410,11 +1489,14 @@ fun ChronometreScreen(
                     ) {
                         itemsIndexed(recordedResults) { index, result ->
                             val obstacle = obstacles.find { it.id == result.obstacle_id }
+                            val seconds = result.time / 10
+                            val tenth = result.time % 10
+
                             ListItem(
                                 headlineContent = {
                                     Text(
                                         "${index + 1}. ${obstacle?.obstacle_name ?: "Inconnu"} : " +
-                                                "${"%.1f".format(result.time)}s (${result.status})",
+                                                "$seconds.${tenth}s (${result.status})",
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 },
@@ -1450,46 +1532,51 @@ fun ChronometreScreen(
                         else MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = when {
-                        isCourseCompleted -> false // Désactivé si course terminée
-                        isRunning -> true // Toujours activé en mode "Arrêter"
-                        else -> !isStartButtonDisabled // Logique normale en mode "Démarrer"
+                    enabled = !isLoadingObstacles && when {
+                        isCourseCompleted -> false
+                        isRunning -> true
+                        else -> !isStartButtonDisabled
                     }
-                ) {
-                    Text(if (isRunning) "Arrêter" else "Démarrer")
+                )  {
+                    if (isLoadingObstacles) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    } else {
+                        Text(if (isRunning) "Arrêter" else "Démarrer")
+                    }
                 }
-
 
                 // Bouton Chute
                 Button(
                     onClick = {
                         val currentObstacle = obstacles.getOrNull(currentObstacleIndex)
                         currentObstacle?.let {
-                            // Enregistrement de la chute
+                            // Convertir en dixièmes de seconde (Int)
+                            val timeTenths = ((timeMillis - currentAttemptStartTime) / 100).toInt()
+
                             val result = ObstacleResult(
                                 competition_id = competitionId.toInt(),
                                 course_id = courseId.toInt(),
                                 competitor_id = competitorId.toInt(),
                                 obstacle_id = it.id,
-                                time = (timeMillis - currentAttemptStartTime) / 1000f,
+                                time = timeTenths, // Stocké en Int
                                 status = "failed"
                             )
                             recordedResults = recordedResults + result
 
                             if (competition?.has_retry == 1) {
                                 if (remainingRetries > 0) {
-                                    // Réessai autorisé
+                                    // Réessai - Réinitialiser le chrono pour cet obstacle
                                     remainingRetries--
                                     timeMillis = currentAttemptStartTime
-                                    currentAttemptStartTime = timeMillis
+                                    currentAttemptStartTime = timeMillis // Nouveau départ
                                 } else {
-                                    // Plus de réessais
+                                    // Plus de réessais - Arrêt définitif
                                     isRunning = false
                                     hasRecordedFall = true
                                     isCourseCompleted = true
                                 }
                             } else {
-                                // Pas de réessai
+                                // Pas de réessai - Arrêt immédiat
                                 isRunning = false
                                 hasRecordedFall = true
                                 isCourseCompleted = true
@@ -1504,9 +1591,8 @@ fun ChronometreScreen(
                 ) {
                     Text(
                         "Chute ${
-                            if (competition?.has_retry == 1) "(${
-                                if (remainingRetries > 0) "1 réessai" else "bloqué"
-                            })" else ""
+                            if (competition?.has_retry == 1) "($remainingRetries)"
+                            else ""
                         }"
                     )
                 }
@@ -1516,40 +1602,63 @@ fun ChronometreScreen(
                 }
 
                 Button(
-                    onClick = {
-                        scope.launch {
-                            try {
-                                // Calculer le temps total et le statut
-                                val totalTime = recordedResults.sumOf { it.time.toDouble() }.toFloat()
-                                val allCompleted = recordedResults.all { it.status == "completed" }
+                    onClick = { handleSaveResults() }, // Utiliser la nouvelle fonction
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = recordedResults.isNotEmpty() && !isRunning && !isSaving
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Sauvegarder les résultats")
+                    }
+                }
 
-                                // 1. Envoyer la performance globale
-                                val performance = Performance(
-                                    competition_id = competitionId.toInt(),
-                                    course_id = courseId.toInt(),
-                                    competitor_id = competitorId.toInt(),
-                                    total_time = totalTime,
-                                    status = if (allCompleted) "completed" else "failed"
-                                )
-
-                                val performanceResponse = ApiClient.apiService.createPerformance(token, performance)
-                                performanceStatus = performanceResponse
-
-                                // 2. Envoyer les résultats des obstacles
-                                recordedResults.forEach { result ->
-                                    ApiClient.apiService.saveObstacleResult(token, result)
-                                }
-
-                                error = "Sauvegarde réussie ! ID Performance: ${performanceResponse.id}"
-                            } catch (e: Exception) {
-                                error = "Erreur : ${e.message}"
+                // Ajouter ce composant pour les erreurs
+                if (apiErrorMessage != null) {
+                    AlertDialog(
+                        onDismissRequest = { apiErrorMessage = null },
+                        title = { Text("Erreur de sauvegarde") },
+                        text = { Text(apiErrorMessage!!) },
+                        confirmButton = {
+                            Button(onClick = { apiErrorMessage = null }) {
+                                Text("OK")
                             }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = recordedResults.isNotEmpty() && !isRunning
-                ) {
-                    Text("Sauvegarder les résultats")
+                    )
+                }
+
+                // Ajouter cette boîte de dialogue
+                if (showPerformanceDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showPerformanceDialog = false },
+                        title = { Text("Performance sauvegardée !") },
+                        text = {
+                            if (savedPerformance != null) {
+                                Column {
+                                    Text("✅ Données enregistrées avec succès !",
+                                        fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("Temps total : ${savedPerformance!!.performance.total_time / 10.0}s")
+                                    Text("Statut : ${savedPerformance!!.performance.status}")
+                                }
+                            } else {
+                                Text("Sauvegarde réussie")
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showPerformanceDialog = false
+                                    resetTrigger++ // Réinitialiser après confirmation
+                                }
+                            ) {
+                                Text("OK")
+                            }
+                        }
+                    )
                 }
 
                 // Modifier le bouton Réinitialiser
