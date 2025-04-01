@@ -263,11 +263,18 @@ interface ApiService {
         @Path("obstacleId") obstacleId: Int
     ): Response<Unit>
 
-    @PUT("courses/{courseId}/update_obstacles_position")
-    suspend fun updateObstaclesPosition(
+    @POST("courses/{courseId}/update_obstacle_position")
+    suspend fun updateObstaclePosition(
         @Header("Authorization") token: String,
         @Path("courseId") courseId: Int,
-        @Body request: UpdateObstaclesPositionRequest
+        @Body request: UpdateObstaclePositionRequest
+    ): Response<Unit>
+
+    @PUT("courses/{courseId}/update_obstacle_position")
+    suspend fun updateSingleObstaclePosition(
+        @Header("Authorization") token: String,
+        @Path("courseId") courseId: Int,
+        @Body request: ObstaclePositionUpdate
     ): Response<Unit>
 
 }
@@ -302,9 +309,19 @@ data class AddObstacleRequest(
     val obstacleId: Int
 )
 
-data class UpdateObstaclesPositionRequest(
-    @SerializedName("obstacle_ids")
-    val obstacleIds: List<Int>
+data class ObstaclePositionUpdate(
+    @SerializedName("obstacle_id")
+    val obstacleId: Int,
+    @SerializedName("position")
+    val position: Int
+)
+
+// Data class pour la requête
+data class UpdateObstaclePositionRequest(
+    @SerializedName("obstacle_id")
+    val obstacleId: Int,
+    @SerializedName("position")
+    val position: Int
 )
 
 
@@ -1653,69 +1670,63 @@ fun CourseObstaclesScreen(
         loadObstacles()
     }
 
-    fun removeObstacle(obstacle: ObstacleCourse) {
-        scope.launch {
-            try {
-                // Vérifier qu'il reste plus d'un obstacle
-                if (courseObstacles.size <= 1) {
-                    errorMessage = "Vous devez conserver au moins un obstacle"
-                    return@launch
-                }
-
-                ApiClient.apiService.removeObstacleFromCourse(
-                    token,
-                    courseId,
-                    obstacle.obstacle_id
-                )
-                loadObstacles()
-            } catch (e: Exception) {
-                errorMessage = "Erreur de suppression: ${e.message}"
-            }
-        }
-    }
-
-    fun savePositions() {
-        scope.launch {
-            try {
-                if (tempPositions.isNotEmpty()) {
-                    ApiClient.apiService.updateObstaclesPosition(
-                        token,
-                        courseId,
-                        UpdateObstaclesPositionRequest(courseObstacles.map { it.obstacle_id })
-                    )
-                    tempPositions = emptyMap()
-                }
-            } catch (e: Exception) {
-                errorMessage = "Erreur lors de la sauvegarde: ${e.message}"
-            }
-        }
-    }
     fun moveObstacleUp(obstacle: ObstacleCourse) {
         val currentIndex = courseObstacles.indexOfFirst { it.obstacle_id == obstacle.obstacle_id }
+        println("DEBUG - Moving up from index $currentIndex")
         if (currentIndex > 0) {
-            val newPosition = courseObstacles[currentIndex - 1].position
-            val temp = courseObstacles.toMutableList()
-            temp[currentIndex] = temp[currentIndex].copy(position = newPosition)
-            temp[currentIndex - 1] = temp[currentIndex - 1].copy(position = obstacle.position)
-            courseObstacles = temp.sortedBy { it.position }
-            tempPositions = tempPositions + mapOf(
-                temp[currentIndex].obstacle_id to newPosition,
-                temp[currentIndex - 1].obstacle_id to obstacle.position
-            )
+            scope.launch {
+                try {
+                    val request = UpdateObstaclePositionRequest(
+                        obstacleId = obstacle.obstacle_id,
+                        position = currentIndex  // Essayez avec et sans +1
+                    )
+                    println("DEBUG - Sending request: $request")
+                    // Envoyer la nouvelle position (currentIndex car les indices commencent à 0)
+                    val response = ApiClient.apiService.updateObstaclePosition(
+                        token,
+                        courseId,
+                        request
+                    )
+                    println("DEBUG - Response: ${response.code()} ${response.message()}")
+                    println("DEBUG - Response body: ${response.errorBody()?.string()}")
+                    if (response.isSuccessful) {
+                        // Recharger les obstacles après mise à jour
+                        loadObstacles()
+                    } else {
+                        errorMessage = "Échec de la mise à jour"
+                    }
+                } catch (e: Exception) {
+                    println("DEBUG - Exception: ${e.stackTraceToString()}")
+                    errorMessage = "Erreur: ${e.message}"
+                }
+            }
         }
     }
+
     fun moveObstacleDown(obstacle: ObstacleCourse) {
         val currentIndex = courseObstacles.indexOfFirst { it.obstacle_id == obstacle.obstacle_id }
         if (currentIndex < courseObstacles.size - 1) {
-            val newPosition = courseObstacles[currentIndex + 1].position
-            val temp = courseObstacles.toMutableList()
-            temp[currentIndex] = temp[currentIndex].copy(position = newPosition)
-            temp[currentIndex + 1] = temp[currentIndex + 1].copy(position = obstacle.position)
-            courseObstacles = temp.sortedBy { it.position }
-            tempPositions = tempPositions + mapOf(
-                temp[currentIndex].obstacle_id to newPosition,
-                temp[currentIndex + 1].obstacle_id to obstacle.position
-            )
+            scope.launch {
+                try {
+                    // Envoyer la nouvelle position (currentIndex + 2 si l'API attend des positions à partir de 1)
+                    val response = ApiClient.apiService.updateObstaclePosition(
+                        token,
+                        courseId,
+                        UpdateObstaclePositionRequest(
+                            obstacleId = obstacle.obstacle_id,
+                            position = currentIndex + 1
+                        )
+                    )
+
+                    if (response.isSuccessful) {
+                        loadObstacles()
+                    } else {
+                        errorMessage = "Échec de la mise à jour"
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "Erreur: ${e.message}"
+                }
+            }
         }
     }
         if (showAddObstacleDialog) {
@@ -1837,10 +1848,6 @@ fun CourseObstaclesScreen(
                     }
                 }
 
-                // Bouton de sauvegarde
-                /*if (tempPositions.isNotEmpty()) {
-                    savePositions()
-                }*/
                 Button(
                     onClick = { showAddObstacleDialog = true },
                     modifier = Modifier
@@ -1854,7 +1861,6 @@ fun CourseObstaclesScreen(
                 Button(
                     onClick = {
                         scope.launch {
-                            savePositions()
                             onFinalSave()
                         }
                     },
