@@ -1,7 +1,6 @@
 # Parkour Competition Judge App
 
-![Parkour Logo](![ic_launcher_adaptive_fore](https://github.com/user-attachments/assets/75323e31-a224-4ae5-8d29-b6571a1c75f2)
-) *(Remplacez par votre logo)*
+![Parkour Logo](https://media.istockphoto.com/id/528565136/fr/vectoriel/parkour-saut-silhouette.jpg?s=612x612&w=0&k=20&c=tcklP_GYbr1PukVrEs_Q4QJMCVmpzSKXerojUMZraNY=) 
 
 Application Android pour l'arbitrage des compétitions de parkour - Projet R4.11 BUT Informatique
 
