@@ -115,9 +115,24 @@ data class Performance(
     val status: String
 )
 
+data class PerformanceAPI(
+    val competitor_id: Int,
+    val course_id: Int,
+    val status: String,
+    val total_time: Int, // 1/10èmes de seconde (123 = 12.3s)
+)
+
+data class ObstacleResultAPI(
+    val obstacle_id: Int,
+    val performance_id: Int,
+    val has_fell: Boolean,
+    val to_verify: Boolean,
+    val time: Int, // 1/10èmes de seconde (45 = 4.5s)
+)
+
 data class PerformanceResponse(
     val id: Int,
-    val performance: Performance
+    val performance: Performance? // Rend le champ nullable
 )
 
 // Interface de l'API
@@ -212,7 +227,7 @@ interface ApiService {
     @POST("results")
     suspend fun saveObstacleResult(
         @Header("Authorization") token: String,
-        @Body result: ObstacleResult
+        @Body result: ObstacleResultAPI
     ): Response<Unit>
 
     @GET("competitions/{id}")
@@ -224,7 +239,7 @@ interface ApiService {
     @POST("performances")
     suspend fun createPerformance(
         @Header("Authorization") token: String,
-        @Body performance: Performance
+        @Body performance: PerformanceAPI
     ): PerformanceResponse
 
     @GET("courses/{id}")
@@ -233,11 +248,14 @@ interface ApiService {
         @Path("id") courseId: Int
     ): Courses
 
-    @GET("performances/{id}")
+    @GET("performances")
     suspend fun getPerformanceById(
         @Header("Authorization") token: String,
         @Path("id") performanceId: Int
     ): PerformanceResponse
+    // Ajouter dans l'interface ApiService
+    @GET("performances")
+    suspend fun getPerformances(@Header("Authorization") token: String): List<PerformanceResponse>
 }
 
 
@@ -1173,8 +1191,50 @@ fun CompetiteurArbitrageItem(
     competitionId: String,
     courseId: String
 ) {
-    val fullName = "${competitor.first_name} ${competitor.last_name}"
-    val age = calculateAge(competitor.born_at)
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    var hasPerformance by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        try {
+            println("🔍 Vérification pour ${competitor.id}...")
+            println("🔍 Vérification pour ${competitionId}...")
+            println("🔍 Vérification pour ${competitor.id}...")
+
+            // 1. Conversion sécurisée des IDs
+            val compId = competitionId.toIntOrNull() ?: throw NumberFormatException("ID Compétition invalide")
+            val crsId = courseId.toIntOrNull() ?: throw NumberFormatException("ID Course invalide")
+            val competitorId = competitor.id
+
+            // 2. Appel API avec vérification null
+            val allPerformances = ApiClient.apiService.getPerformances(token)
+            println("📦 Réponse API (${allPerformances.size} éléments)")
+
+            // 3. Filtrage sécurisé avec vérification null
+            val matching = allPerformances.filter { response ->
+                response.performance?.let { perf ->
+                    perf.competition_id == compId &&
+                            perf.course_id == crsId &&
+                            perf.competitor_id == competitorId
+                } ?: false
+            }
+
+            // 4. Vérification des résultats
+            println("🔎 ${matching.size} performances valides trouvées")
+            hasPerformance = matching.isNotEmpty()
+
+        } catch (e: NumberFormatException) {
+            errorMessage = "Erreur format ID: ${e.message}"
+            println("🔴 $errorMessage")
+        } catch (e: Exception) {
+            errorMessage = "Erreur technique: ${e.message?.take(200)}"
+            println("🔴 ${e.javaClass.simpleName}: ${e.message}")
+        } finally {
+            isLoading = false
+            println("✅ Vérification terminée - Performance existante: $hasPerformance")
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -1190,23 +1250,32 @@ fun CompetiteurArbitrageItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = fullName,
+                    text = "${competitor.first_name} ${competitor.last_name}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Text("Âge: $age ans")
+                Text("Âge: ${calculateAge(competitor.born_at)} ans")
                 Text("Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
             }
 
-            IconButton(
-                onClick = {
-                    navController.navigate("chronometre/$competitionId/$courseId/${competitor.id}")
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+            } else {
+                IconButton(
+                    onClick = {
+                        navController.navigate("chronometre/$competitionId/$courseId/${competitor.id}")
+                    },
+                    enabled = !hasPerformance
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sports,
+                        contentDescription = "Arbitrage",
+                        tint = if (hasPerformance)
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        else
+                            MaterialTheme.colorScheme.primary
+                    )
                 }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Sports,
-                    contentDescription = "Arbitrage"
-                )
             }
         }
     }
@@ -1257,15 +1326,6 @@ fun ChronometreScreen(
             apiErrorMessage = null
 
             try {
-                // Sauvegarder les résultats d'obstacles d'abord
-                recordedResults.forEach {
-                    // Convertir le statut des obstacles si nécessaire
-                    val obstacleStatus = when(it.status) {
-                        "failed" -> "defection" // Ou la valeur appropriée
-                        else -> "to_verify" // Valeur par défaut
-                    }
-                    ApiClient.apiService.saveObstacleResult(token, it.copy(status = obstacleStatus))
-                }
 
                 // Calculer le statut global de la performance
                 val totalTenths = recordedResults.sumOf { it.time }
@@ -1276,18 +1336,44 @@ fun ChronometreScreen(
                     currentObstacleIndex < obstacles.size -> "to_finish"
                     else -> "to_verify" // Tous les obstacles terminés
                 }
-
+                val insert = PerformanceAPI(
+                    competitorId.toInt(),
+                    courseId.toInt(),
+                    "to_verify",
+                    totalTenths
+                )
                 // Créer la performance avec le bon statut
                 val performanceResponse = ApiClient.apiService.createPerformance(
                     token,
-                    Performance(
-                        competitionId.toInt(),
-                        courseId.toInt(),
-                        competitorId.toInt(),
-                        totalTenths,
-                        globalStatus // Utiliser la valeur correcte
-                    )
+                   insert
                 )
+
+                // Sauvegarder les résultats d'obstacles d'abord
+                recordedResults.forEach {
+                    // Convertir le statut des obstacles si nécessaire
+                    val obstacleStatus = when(it.status) {
+                        "failed" -> "defection" // Ou la valeur appropriée
+                        else -> "to_verify" // Valeur par défaut
+                    }
+
+
+                    val p = ApiClient.apiService.getPerformances(token).filter { it.performance?.competitor_id == competitorId.toInt()
+                            && it.performance.course_id == courseId.toInt()  }
+                    val pi = p.get(0)
+
+                    ApiClient.apiService.saveObstacleResult(token,
+                        ObstacleResultAPI(
+                            obstacle_id = it.obstacle_id,
+                            performance_id = pi.id,
+                            has_fell = hasRecordedFall,
+                            to_verify = false,
+                            time = it.time,
+                        )
+                        )
+                }
+
+
+
 
                 savedPerformance = performanceResponse
                 showPerformanceDialog = true
@@ -1636,17 +1722,7 @@ fun ChronometreScreen(
                         onDismissRequest = { showPerformanceDialog = false },
                         title = { Text("Performance sauvegardée !") },
                         text = {
-                            if (savedPerformance != null) {
-                                Column {
-                                    Text("✅ Données enregistrées avec succès !",
-                                        fontWeight = FontWeight.Bold)
-                                    Spacer(Modifier.height(8.dp))
-                                    Text("Temps total : ${savedPerformance!!.performance.total_time / 10.0}s")
-                                    Text("Statut : ${savedPerformance!!.performance.status}")
-                                }
-                            } else {
                                 Text("Sauvegarde réussie")
-                            }
                         },
                         confirmButton = {
                             Button(
