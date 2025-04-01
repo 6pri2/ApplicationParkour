@@ -54,45 +54,14 @@ import kotlinx.coroutines.delay
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.graphics.Color
 import com.google.gson.annotations.SerializedName
+import iut.gon.applicationparkour.data.model.Competition
+import iut.gon.applicationparkour.data.model.Competitor
+import iut.gon.applicationparkour.data.model.Courses
+import iut.gon.applicationparkour.data.model.Obstacles
 import retrofit2.HttpException
 
 
 // --- Configuration Retrofit ---
-
-// Data class pour représenter une compétition
-data class Competition(
-    val id: Int,
-    val name: String,
-    val age_min: Int,
-    val age_max: Int,
-    val gender: String,
-    val has_retry: Int,
-    val status: String
-)
-
-data class Competitor(
-    val id: Int,
-    val first_name: String,
-    val last_name: String,
-    val email: String,
-    val gender: String,
-    val phone: String,
-    val born_at: String // Format "yyyy-MM-dd"
-)
-
-data class Courses(
-    val id: Int,
-    val name: String,
-    val max_duration: Int,
-    val position: Int,
-    val is_over: Int,
-    val competition_id: Int
-)
-
-data class Obstacles(
-    val id: Int,
-    val name: String,
-)
 
 // Interface de l'API
 interface ApiService {
