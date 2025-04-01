@@ -5,16 +5,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import iut.gon.applicationparkour.ArbitrageScreen
-import iut.gon.applicationparkour.ArbitragesScreen
 import iut.gon.applicationparkour.CompetitionArbitrageScreen
 import iut.gon.applicationparkour.CompetitionCompetitorsScreen
 import iut.gon.applicationparkour.CompetitionCoursesScreen
 import iut.gon.applicationparkour.CompetitionResultsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionScreen
-import iut.gon.applicationparkour.CompetitorScreen
+import iut.gon.applicationparkour.ui.screens.CompetitorScreen
 import iut.gon.applicationparkour.CourseObstaclesScreen
-import iut.gon.applicationparkour.CoursesScreen
-import iut.gon.applicationparkour.ObstaclesScreen
+import iut.gon.applicationparkour.ui.screens.ObstaclesScreen
 import iut.gon.applicationparkour.ResultScreen
 import iut.gon.applicationparkour.ui.screens.WelcomeScreen
 
@@ -35,14 +33,8 @@ fun ParkourApp() {
         composable("competitions") {
             CompetitionScreen(navController)
         }
-        composable("courses") {
-            CoursesScreen(navController)
-        }
         composable("obstacles") {
             ObstaclesScreen(navController)
-        }
-        composable("arbitrage") {
-            ArbitragesScreen(navController)
         }
         composable("competitors/{competitionId}") { backStackEntry ->
             val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
