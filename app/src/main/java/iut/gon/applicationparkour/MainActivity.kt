@@ -38,33 +38,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import iut.gon.applicationparkour.ui.theme.ApplicationParkourTheme
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.time.LocalDate
 import java.time.Period
 import kotlinx.coroutines.delay
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.graphics.Color
-import iut.gon.applicationparkour.data.api.ApiService
+import iut.gon.applicationparkour.data.api.ApiClient
 import iut.gon.applicationparkour.data.model.*
 import retrofit2.HttpException
 
 
 // --- Configuration Retrofit ---
 
-
-// Objet singleton pour créer l'instance Retrofit
-object ApiClient {
-    private const val BASE_URL = "http://92.222.217.100/api/"
-
-    val apiService: ApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(ApiService::class.java)
-    }
-}
 
 // --- Activité principale ---
 
