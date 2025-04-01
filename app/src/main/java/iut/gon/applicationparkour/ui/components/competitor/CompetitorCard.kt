@@ -10,7 +10,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import iut.gon.applicationparkour.calculateAge
 import iut.gon.applicationparkour.data.model.Competitor
 
 /**
