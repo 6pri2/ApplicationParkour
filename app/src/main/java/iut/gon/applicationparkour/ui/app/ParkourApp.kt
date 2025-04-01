@@ -11,7 +11,7 @@ import iut.gon.applicationparkour.CompetitionCoursesScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionResultsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionScreen
 import iut.gon.applicationparkour.ui.screens.CompetitorScreen
-import iut.gon.applicationparkour.CourseObstaclesScreen
+import iut.gon.applicationparkour.ui.screens.CourseObstaclesScreen
 import iut.gon.applicationparkour.ui.screens.ObstaclesScreen
 import iut.gon.applicationparkour.ui.screens.ResultScreen
 import iut.gon.applicationparkour.ui.screens.WelcomeScreen
