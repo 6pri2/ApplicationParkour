@@ -1,8 +1,9 @@
 # Parkour Competition Judge App
 
-![Parkour Logo](https://via.placeholder.com/150) *(Remplacez par votre logo)*
+![Parkour Logo](![ic_launcher_adaptive_fore](https://github.com/user-attachments/assets/75323e31-a224-4ae5-8d29-b6571a1c75f2)
+) *(Remplacez par votre logo)*
 
-Application Android pour l'arbitrage des compétitions de parkour (type Ninja Warrior) - Projet R4.11 BUT Informatique
+Application Android pour l'arbitrage des compétitions de parkour - Projet R4.11 BUT Informatique
 
 ## 🎯 Fonctionnalités
 
@@ -15,7 +16,7 @@ Application Android pour l'arbitrage des compétitions de parkour (type Ninja Wa
   - Filtrage par éligibilité (âge, genre)
 
 - **Arbitrage en temps réel** :
-  - Chronométrage précis au 1/10ème de seconde
+  - Chronométrage précis au 10ème de seconde
   - Gestion des chutes et reprises
   - Calcul automatique des classements
 
