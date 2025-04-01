@@ -33,6 +33,10 @@ import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Page d'arbitrage d'une competition
+ */
+
 @Composable
 fun CompetitionArbitrageScreen(navController: NavController, competitionId: String) {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"

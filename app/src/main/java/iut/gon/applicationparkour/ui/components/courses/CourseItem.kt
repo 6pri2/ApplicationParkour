@@ -20,6 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import iut.gon.applicationparkour.data.model.Courses
 
+/**
+ * Carte d'une course
+ */
+
 @Composable
 fun CourseItem(
     course: Courses,

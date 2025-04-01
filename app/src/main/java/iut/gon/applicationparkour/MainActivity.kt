@@ -1460,41 +1460,6 @@ fun CourseItemModif(
     }
 }
 
-@Composable
-fun CompetitionResultsScreen(navController: NavController, competitionId: String) {
-    ScreenScaffold(
-        title = "Résultats de la compétition",
-        navController = navController
-    ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Résultats de la compétition: $competitionId")
-        }
-    }
-}
-
-// Écran d'arbitrage (à ajouter à votre graphe de navigation)
-@Composable
-fun ArbitrageScreen(navController: NavController, competitionId: String, courseId: String) {
-    ScreenScaffold(
-        title = "Arbitrage du parcours",
-        navController = navController
-    ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "Arbitrage du parcours: ${courseId}",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Text(
-                    "Compétition: ${competitionId}",
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                // Ajoutez ici les fonctionnalités d'arbitrage
-            }
-        }
-    }
-}
-
 
 @Composable
 fun AddCompetitorDialog(
