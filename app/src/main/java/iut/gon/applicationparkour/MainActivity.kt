@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
@@ -33,9 +32,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import iut.gon.applicationparkour.ui.theme.ApplicationParkourTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -45,11 +41,9 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.graphics.Color
 import iut.gon.applicationparkour.data.api.ApiClient
 import iut.gon.applicationparkour.data.model.*
+import iut.gon.applicationparkour.ui.app.ParkourApp
+import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold
 import retrofit2.HttpException
-
-
-// --- Configuration Retrofit ---
-
 
 // --- Activité principale ---
 
@@ -61,76 +55,6 @@ class MainActivity : ComponentActivity() {
             ApplicationParkourTheme {
                 ParkourApp()
             }
-        }
-    }
-}
-
-@Composable
-fun ParkourApp() {
-    val navController = rememberNavController()
-
-    NavHost(
-        navController = navController,
-        startDestination = "welcome"
-    ) {
-        composable("welcome") {
-            WelcomeScreen(navController)
-        }
-        composable("competitors") {
-            CompetitorScreen(navController)
-        }
-        composable("competitions") {
-            CompetitionScreen(navController)
-        }
-        composable("courses") {
-            CoursesScreen(navController)
-        }
-        composable("obstacles") {
-            ObstaclesScreen(navController)
-        }
-        composable("arbitrage") {
-            ArbitragesScreen(navController)
-        }
-        composable("competitors/{competitionId}") { backStackEntry ->
-            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
-            CompetitionCompetitorsScreen(navController, competitionId.toInt())
-        }
-
-        composable("results/{competitionId}") { backStackEntry ->
-            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
-            CompetitionResultsScreen(navController, competitionId)
-        }
-
-        composable("arbitrage/{competitionId}") { backStackEntry ->
-            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
-            CompetitionArbitrageScreen(navController, competitionId)
-        }
-
-        composable("competitionArbitrage/{competitionId}") { backStackEntry ->
-            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: ""
-            CompetitionArbitrageScreen(navController, competitionId)
-        }
-        composable("resultScreen/{competitionId}/{courseId}") { backStackEntry ->
-            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: ""
-            val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
-            ResultScreen(navController, competitionId, courseId)
-        }
-        composable("arbitrageScreen/{competitionId}/{courseId}") { backStackEntry ->
-            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: ""
-            val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
-            ArbitrageScreen(navController, competitionId, courseId)
-        }
-
-        composable("competitionCourses/{competitionId}") { backStackEntry ->
-            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: "0"
-            CompetitionCoursesScreen(navController, competitionId, onFinalSave = {
-                navController.popBackStack()
-            })
-        }
-
-        composable("courseObstacles/{courseId}") { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull() ?: 0
-            CourseObstaclesScreen(navController, courseId)
         }
     }
 }
@@ -175,37 +99,6 @@ fun WelcomeScreen(navController: NavController) {
         ){
             Text("Obstacles")
         }
-
-        // Ajoutez les autres boutons de la même manière
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ScreenScaffold(
-    title: String,
-    navController: NavController,
-    content: @Composable () -> Unit
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            content()
-        }
     }
 }
 
@@ -245,10 +138,11 @@ fun CompetitionScreen(navController: NavController) {
             scope.launch {
                 isLoading = true
                 try {
-                    val createdCompetition = ApiClient.apiService.addCompetition(token, baseCompetition)
+                    val createdCompetition =
+                        ApiClient.apiService.addCompetition(token, baseCompetition)
                     showSuccessMessage = "Compétition créée"
-                    navController.navigate("competitionCourses/${createdCompetition.id}"){
-                        popUpTo("competitions") {inclusive = false}
+                    navController.navigate("competitionCourses/${createdCompetition.id}") {
+                        popUpTo("competitions") { inclusive = false }
                     }
                 } catch (e: Exception) {
                     showErrorMessage = "Erreur création: ${e.message}"
@@ -339,8 +233,10 @@ fun CompetitionScreen(navController: NavController) {
             )
         }
 
-        Box(modifier = Modifier
-            .fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
 
             when {
                 isLoading && competitions == null -> {
@@ -348,6 +244,7 @@ fun CompetitionScreen(navController: NavController) {
                         CircularProgressIndicator()
                     }
                 }
+
                 competitions.isNullOrEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -362,6 +259,7 @@ fun CompetitionScreen(navController: NavController) {
                         }
                     }
                 }
+
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -420,14 +318,22 @@ fun CompetitionScreen(navController: NavController) {
                 showSuccessMessage?.let { message ->
                     Snackbar(
                         modifier = Modifier.padding(16.dp),
-                        action = { IconButton({ showSuccessMessage = null }) { Icon(Icons.Default.Close, "Fermer") } }
+                        action = {
+                            IconButton({
+                                showSuccessMessage = null
+                            }) { Icon(Icons.Default.Close, "Fermer") }
+                        }
                     ) { Text(message, color = MaterialTheme.colorScheme.onPrimaryContainer) }
                 }
                 showErrorMessage?.let { message ->
                     Snackbar(
                         modifier = Modifier.padding(16.dp),
                         containerColor = MaterialTheme.colorScheme.errorContainer,
-                        action = { IconButton({ showErrorMessage = null }) { Icon(Icons.Default.Close, "Fermer") } }
+                        action = {
+                            IconButton({
+                                showErrorMessage = null
+                            }) { Icon(Icons.Default.Close, "Fermer") }
+                        }
                     ) { Text(message, color = MaterialTheme.colorScheme.onErrorContainer) }
                 }
             }
@@ -907,6 +813,7 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: In
                     text = error!!,
                     color = MaterialTheme.colorScheme.error
                 )
+
                 competitors.isNullOrEmpty() -> Text("Aucun compétiteur trouvé")
                 else -> {
                     Column(
@@ -1180,8 +1087,10 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
         title = "Parcours de la compétition",
         navController = navController
     ) {
-        Box(modifier = Modifier
-            .fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
 
             Column(modifier = Modifier.fillMaxSize()) {
                 // Liste des parcours
@@ -1191,13 +1100,13 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                             course = course,
                             onEdit = { courseToEdit = course; showEditDialog = true },
                             onDelete = {
-                                if(courses.size > 1) {
+                                if (courses.size > 1) {
                                     courseToDelete = course;
                                     showDeleteDialog = true
-                                }else{
+                                } else {
                                     error = "Vous devez conserver au moins un parcours"
                                 }
-                                       },
+                            },
                             onMoveUp = { moveCourseUp(course) },
                             onMoveDown = { moveCourseDown(course) },
                             isFirst = courses.firstOrNull()?.id == course.id,
@@ -1220,9 +1129,9 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                 // Bouton Valider la compétition
                 Button(
                     onClick = {
-                        if(courses.isEmpty()){
+                        if (courses.isEmpty()) {
                             error = "Vous devez ajouter au moins un parcours avant de valider"
-                        }else {
+                        } else {
                             scope.launch {
                                 if (tempPositions.isNotEmpty()) {
                                     savePositions()
@@ -1255,6 +1164,7 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                         CircularProgressIndicator()
                     }
                 }
+
                 error != null -> {
                     Snackbar(
                         modifier = Modifier.padding(16.dp),
@@ -1524,7 +1434,7 @@ fun CourseObstaclesScreen(
                             },
                             isFirst = courseObstacles.firstOrNull()?.obstacle_id == obstacle.obstacle_id,
                             isLast = courseObstacles.lastOrNull()?.obstacle_id == obstacle.obstacle_id,
-                            isOnlyObstacle = courseObstacles.size ==1
+                            isOnlyObstacle = courseObstacles.size == 1
                         )
                     }
                 }
@@ -1597,6 +1507,7 @@ fun CourseObstaclesScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 errorMessage != null -> {
                     Snackbar(
                         modifier = Modifier.padding(16.dp),
@@ -1903,6 +1814,7 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
                             CircularProgressIndicator()
                         }
                     }
+
                     error != null -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -1914,6 +1826,7 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
                             )
                         }
                     }
+
                     courses.isEmpty() -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -1922,6 +1835,7 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
                             Text("Aucun parcours trouvé pour cette compétition")
                         }
                     }
+
                     else -> {
                         LazyColumn(modifier = Modifier.weight(1f)) {
                             items(courses) { course ->
@@ -2053,8 +1967,14 @@ fun ResultScreen(navController: NavController, competitionId: String, courseId: 
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Résultat du parcours: ${courseId}", style = MaterialTheme.typography.headlineMedium)
-                Text("Compétition: ${competitionId}", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "Résultat du parcours: ${courseId}",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Text(
+                    "Compétition: ${competitionId}",
+                    style = MaterialTheme.typography.headlineSmall
+                )
                 // Ajoutez ici les détails des résultats
             }
         }
@@ -2070,8 +1990,14 @@ fun ArbitrageScreen(navController: NavController, competitionId: String, courseI
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Arbitrage du parcours: ${courseId}", style = MaterialTheme.typography.headlineMedium)
-                Text("Compétition: ${competitionId}", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "Arbitrage du parcours: ${courseId}",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Text(
+                    "Compétition: ${competitionId}",
+                    style = MaterialTheme.typography.headlineSmall
+                )
                 // Ajoutez ici les fonctionnalités d'arbitrage
             }
         }
@@ -2158,9 +2084,11 @@ fun CompetitorScreen(navController: NavController) {
         }
 
         // Affichage de la liste des compétiteurs
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
             when {
                 competitors == null -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally)) // Si les compétiteurs sont en cours de chargement
@@ -2180,7 +2108,7 @@ fun CompetitorScreen(navController: NavController) {
                             // Ici on utilise simplement l'ordre d'ajout dans la liste
                             competitors!!.indexOf(it)
                         }) { competitor ->
-                            
+
                             val fullName = "${competitor.first_name} ${competitor.last_name}"
                             val birthDate = competitor.born_at // Format : "yyyy-MM-dd"
                             // Calculer l'âge
@@ -2420,9 +2348,11 @@ fun CoursesScreen(navController: NavController) {
         when {
             courses == null -> CircularProgressIndicator()
             courses!!.isEmpty() -> Text("Aucune course trouvée")
-            else -> LazyColumn(modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)) {
+            else -> LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
                 items(courses!!) { course ->
                     Card(
                         modifier = Modifier
@@ -2518,9 +2448,11 @@ fun ObstaclesScreen(navController: NavController) {
             )
         }
 
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
             when {
                 obstacles == null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                 obstacles!!.isEmpty() -> Text(
