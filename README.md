@@ -116,8 +116,8 @@ graph TD
     
     %% Actions Arbitrage
     E --> L[Arbitrage]
-    L --> L1[Chronomètre Obstacle]
-    L --> L2[Noter]
+    L --> L1[Classement]
+    L --> L2[Chronometre]
     
     %% Actions Participants
     F --> O[Ajouter Participant]
