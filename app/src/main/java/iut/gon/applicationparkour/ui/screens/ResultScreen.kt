@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,20 +66,13 @@ data class Performance(
     val updatedAt: String
 )
 
-// PerformanceDetails.kt
-data class PerformanceDetails(
+data class PerformanceObstacle(
     val id: Int,
-    @SerializedName("competitor_id") val competitorId: Int,
-    @SerializedName("course_id") val courseId: Int,
-    val status: String,
-    @SerializedName("total_time") val totalTime: Int,
-)
-
-data class ObstacleTime(
-    val id: Int,
-    val name: String,
-    val time: Int, // temps en millisecondes
-    @SerializedName("position") val obstaclePosition: Int
+    val obstacle_id: Int,
+    val performance_id: Int,
+    val time: Int,
+    val has_fell: Int,
+    val to_verify: Int
 )
 
 @Composable
@@ -316,6 +311,7 @@ fun CompetitorDetailsScreen(
     var competition by remember { mutableStateOf<Competition?>(null) }
     var course by remember { mutableStateOf<Courses?>(null) }
     var competitor by remember { mutableStateOf<Competitor?>(null) }
+    var obstacles by remember { mutableStateOf<List<PerformanceObstacle>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -332,11 +328,18 @@ fun CompetitorDetailsScreen(
                     ApiClient.apiService.getAllCompetitors(token)
                         .firstOrNull { it.id == competitorId.toInt() }
                 }
+                val deferredObstacles = async {
+                    ApiClient.apiService.getPerformanceObstacles(token,performanceId.toInt())
+                }
+
+
 
                 competition = deferredCompetition.await()
                 course = deferredCourse.await()
                 competitor = deferredCompetitor.await()
+                obstacles = deferredObstacles.await()
                 loading = false
+                println(obstacles.size)
             } catch (e: Exception) {
                 error = "Erreur de chargement: ${e.message}"
                 loading = false
@@ -348,60 +351,90 @@ fun CompetitorDetailsScreen(
         title = "Détails participant",
         navController = navController
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
-            when {
-                loading -> {
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
-                }
-                error != null -> {
+        if (loading) {
+            CircularProgressIndicator()
+        } else if (error != null) {
+            Text(
+                text = error!!,
+                color = MaterialTheme.colorScheme.error)
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                // Section informations principales
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.align(Alignment.Center)
+                        text = "Compétition: ${competition?.name ?: "Non disponible"}",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = "Parcours: ${course?.name ?: "Non disponible"}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Participant: ${competitor?.let { "${it.first_name} ${it.last_name}" } ?: "Non disponible"}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Classement: $rank",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "ID Performance: $performanceId",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
-                else -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+
+                // Section obstacles
+                Text(
+                    text = "Obstacles",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+
+                if (obstacles.isEmpty()) {
+                    Text(
+                        text = "Aucun obstacle trouvé",
+                        modifier = Modifier.padding(16.dp)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // ID Performance
-                        Text(
-                            text = "ID Performance: $performanceId",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-
-                        // Compétition
-                        Text(
-                            text = "Compétition: ${competition?.name ?: "Non disponible"}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        // Parcours
-                        Text(
-                            text = "Parcours: ${course?.name ?: "Non disponible"}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        // Participant
-                        Text(
-                            text = "Participant: ${competitor?.let { "${it.first_name} ${it.last_name}" } ?: "Non disponible"}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        // Classement
-                        Text(
-                            text = "Classement: $rank",
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        items(obstacles) { obstacle ->
+                            ObstacleCard(obstacle = obstacle)
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ObstacleCard(obstacle: PerformanceObstacle) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Obstacle #${obstacle.obstacle_id}",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(text = "Temps: ${obstacle.time} secondes")
+            Text(text = "Chute: ${if (obstacle.has_fell == 1) "Oui" else "Non"}")
+            Text(text = "À vérifier: ${if (obstacle.to_verify == 1) "Oui" else "Non"}")
         }
     }
 }

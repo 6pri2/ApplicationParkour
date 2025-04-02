@@ -11,7 +11,7 @@ import iut.gon.applicationparkour.data.model.ObstacleCourse
 import iut.gon.applicationparkour.data.model.Obstacles
 import iut.gon.applicationparkour.data.model.UpdateObstaclePositionRequest
 import iut.gon.applicationparkour.ui.screens.Performance
-import iut.gon.applicationparkour.ui.screens.PerformanceDetails
+import iut.gon.applicationparkour.ui.screens.PerformanceObstacle
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -84,6 +84,17 @@ interface ApiService {
         @Header("Authorization") token: String
     ): List<Performance>
 
+    @GET("performances/{id}/details")
+    suspend fun getPerformanceObstacles(
+        @Header("Authorization") token: String,
+        @Path("id") performanceId : Int
+    ): List<PerformanceObstacle>
+
+    @GET("obstacles/{id}")
+    suspend fun getObstacleDetails(
+        @Header("Authorization") token: String,
+        @Path("id") ObstacleId : Int
+    ) : Obstacles
 
     @POST("obstacles")
     suspend fun addObstacles(
