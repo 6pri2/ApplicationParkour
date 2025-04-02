@@ -97,11 +97,28 @@ app/
 graph TD
     A[Accueil] --> B[[Créer Compétition]]
     A --> C[[Arbitrer Compétition]]
-    B --> D[Liste Compétitions]
-    C --> D
-    D --> E[Détails Compétition]
-    E --> F[Parcours]
-    E --> G[Concurrents]
-    E --> H[Arbitrage]
-    H --> I[Chronomètre Obstacle]
-    H --> J[Classement]
+    A --> D[[Gérer Participants]]
+    
+    B --> E[Liste Compétitions]
+    C --> E
+    D --> F[Liste Participants]
+    
+    E --> G[Détails Compétition]
+    G --> H[Parcours]
+    G --> I[Concurrents]
+    G --> J[Arbitrage]
+    
+    J --> K[Chronomètre Obstacle]
+    J --> L[Classement]
+    
+    F --> M[Ajouter Participant]
+    F --> N[Modifier Participant]
+    F --> O[Supprimer Participant]
+    
+    style A fill:#f9f,stroke:#333
+    style B fill:#9f9,stroke:#333
+    style C fill:#9f9,stroke:#333
+    style D fill:#9f9,stroke:#333
+    style E fill:#ff9,stroke:#333
+    style F fill:#ff9,stroke:#333
+    style G fill:#bbf,stroke:#333
