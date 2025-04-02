@@ -94,24 +94,24 @@ app/
 ## 📱 Navigation principale
 
 ```mermaid
-graph TD
-    A[Accueil] --> B[[Competition]]
+A[Accueil] --> B[[Competition]]
     A --> C[[Competiteur]]
     A --> D[[Obstacles]]
     
     B --> E[Liste Compétitions]
-    C --> E
-    D --> F[Liste Participants]
+    C --> F[Liste Participants]
+    D --> G[Modifier Obstacle]
+    D --> H[Supprimer Obstacle]
     
-    E --> G[Détails Compétition]
-    G --> H[Parcours]
-    G --> I[Concurrents]
-    G --> J[Arbitrage]
+    E --> I[Détails Compétition]
+    I --> J[Parcours]
+    I --> K[Concurrents]
+    I --> L[Arbitrage]
     
-    J --> K[Chronomètre Obstacle]
-    J --> L[Classement]
+    L --> M[Chronomètre Obstacle]
+    L --> N[Classement]
     
-    F --> M[Ajouter Participant]
-    F --> N[Modifier Participant]
-    F --> O[Supprimer Participant]
+    F --> O[Ajouter Participant]
+    F --> P[Modifier Participant]
+    F --> Q[Supprimer Participant]
     
