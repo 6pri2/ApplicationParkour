@@ -4,6 +4,10 @@
 
 Application Android pour l'arbitrage des compétitions de parkour - Projet R4.11 BUT Informatique
 
+## Introduction
+
+Ce projet consiste en le développement d'une application Android dédiée à l'arbitrage de compétitions de parkour. L'application permet de chronométrer précisément les performances des compétiteur, gérer les parcours, les obstacles, et les classements, tout en assurant une synchronisation fluide avec une api. Conçue pour les compétitions de type Ninja Warrior, elle offre des fonctionnalités complètes pour les organisateurs et les arbitres, garantissant un suivi fiable et en temps réel des résultats.  
+
 ## 🎯 Fonctionnalités
 
 - **Gestion des compétitions** :
@@ -128,5 +132,6 @@ graph TD
     D --> G
     D --> H
     
-
-    
+```
+## Autheur
+Duroy Cyprien , Le Roy Alexandre , Caillet Enzo et Guernine Lyes 
