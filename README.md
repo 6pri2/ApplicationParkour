@@ -115,10 +115,3 @@ graph TD
     F --> N[Modifier Participant]
     F --> O[Supprimer Participant]
     
-    style A fill:#f9f,stroke:#333
-    style B fill:#9f9,stroke:#333
-    style C fill:#9f9,stroke:#333
-    style D fill:#9f9,stroke:#333
-    style E fill:#ff9,stroke:#333
-    style F fill:#ff9,stroke:#333
-    style G fill:#bbf,stroke:#333
