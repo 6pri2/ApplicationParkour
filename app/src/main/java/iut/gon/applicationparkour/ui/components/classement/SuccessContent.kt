@@ -31,7 +31,8 @@ fun SuccessContent(
     onCompetitorClick: (Performance, Int) -> Unit
 ) {
     val sortedPerformances = remember(performances) {
-        performances.sortedWith(
+        performances.filter { it.totalTime>0 }
+        .sortedWith(
             compareBy(
                 {
                     when (it.status.lowercase()) {
