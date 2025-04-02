@@ -22,7 +22,7 @@ Application Android pour l'arbitrage des compétitions de parkour - Projet R4.11
 - **Synchronisation** :
   - Stockage local pour un arbitrage sans latence
  
-
+```bash
 app/
 │
 ├── manifests/
