@@ -131,14 +131,19 @@ fun ChronometreScreen(
                     println(p.size)
                     val pi = p.get(0)
 
-                    println(ApiClient.apiService.saveObstacleResult(
-                        ObstacleResultAPI(
-                            obstacle_id = it.obstacle_id,
-                            performance_id = pi.id,
-                            has_fell = hasRecordedFall,
-                            to_verify = false,
-                            time = it.time,
-                        )
+                    val insertion = ObstacleResultAPI(
+                        obstacle_id = it.obstacle_id,
+                        performance_id = pi.id,
+                        has_fell = hasRecordedFall,
+                        to_verify = false,
+                        time = it.time,
+                    )
+                    println("id obstacle" + it.obstacle_id)
+                    println("id performance : " + pi.id)
+                    println("has_fell : " + hasRecordedFall)
+                    println("temps : "+ it.time)
+                    println("result" + ApiClient.apiService.saveObstacleResult(
+                        insertion
                     ))
                 }
 
