@@ -107,7 +107,6 @@ graph TD
     E --> I[Détails Compétition]
     I --> J[Parcours]
     I --> K[Modifier]
-    I --> K[Supprimer]
     I --> L[Arbitrage]
     
     %% Actions pour Liste Compétitions
@@ -117,6 +116,8 @@ graph TD
     %% Actions pour Détails Compétition
     I --> I1[Classement]
     
+ 
+    
     %% Actions pour Arbitrage
     L --> L1[Chronomètre Obstacle]
     L --> L2[Noter]
@@ -125,4 +126,15 @@ graph TD
     F --> O[Ajouter]
     F --> P[Modifier]
     F --> Q[Supprimer]
+    
+    %% Styles
+    style A fill:#f9f,stroke:#333
+    style B fill:#9f9,stroke:#333
+    style C fill:#9f9,stroke:#333
+    style D fill:#9f9,stroke:#333
+    style E fill:#ff9,stroke:#333
+    style F fill:#ff9,stroke:#333
+    style I fill:#bbf,stroke:#333
+    style K fill:#bbf,stroke:#333
+    style L fill:#bbf,stroke:#333
     
