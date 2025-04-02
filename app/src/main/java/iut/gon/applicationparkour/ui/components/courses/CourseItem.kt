@@ -27,7 +27,10 @@ fun CourseItem(
             .padding(8.dp)
             .shadow(4.dp, RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        onClick = {
+            navController.navigate("arbitrageScreen/${competitionId}/${course.id}")
+        }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Nom de la course

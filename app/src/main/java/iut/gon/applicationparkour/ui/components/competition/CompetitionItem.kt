@@ -34,7 +34,8 @@ fun CompetitionItem(
             .padding(8.dp)
             .shadow(4.dp, RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        onClick = onArbitrage
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Titre de la compétition
@@ -85,13 +86,6 @@ fun CompetitionItem(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Compétiteurs",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                IconButton(onClick = onResults) {
-                    Icon(
-                        imageVector = Icons.Default.EmojiEvents,
-                        contentDescription = "Résultats",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
