@@ -89,6 +89,8 @@ app/
 │
 └── MainActivity.kt
 
+```
+
 ## 📱 Navigation principale
 
 ```mermaid
