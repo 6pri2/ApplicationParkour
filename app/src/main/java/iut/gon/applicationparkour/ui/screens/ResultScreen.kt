@@ -64,6 +64,22 @@ data class Performance(
     val updatedAt: String
 )
 
+// PerformanceDetails.kt
+data class PerformanceDetails(
+    val id: Int,
+    @SerializedName("competitor_id") val competitorId: Int,
+    @SerializedName("course_id") val courseId: Int,
+    val status: String,
+    @SerializedName("total_time") val totalTime: Int,
+)
+
+data class ObstacleTime(
+    val id: Int,
+    val name: String,
+    val time: Int, // temps en millisecondes
+    @SerializedName("position") val obstaclePosition: Int
+)
+
 @Composable
 fun ResultScreen(navController: NavController, competitionId: String, courseId: String) {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y" // Remplacez par votre vrai token
@@ -293,32 +309,164 @@ fun CompetitorDetailsScreen(
     competitorId: String,
     rank: String
 ) {
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    val scope = rememberCoroutineScope()
+
+    var performanceDetails by remember { mutableStateOf<PerformanceDetails?>(null) }
+    var competition by remember { mutableStateOf<Competition?>(null) }
+    var course by remember { mutableStateOf<Courses?>(null) }
+    var competitor by remember { mutableStateOf<Competitor?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            try {
+                val performances = ApiClient.apiService.getPerformances(token)
+                val performanceId = performances.firstOrNull {
+                    it.competitorId == competitorId.toInt() &&
+                            it.courseId == courseId.toInt()
+                }?.id ?: throw Exception("Performance non trouvée")
+
+                val deferredDetails = async {
+                    ApiClient.apiService.getPerformanceDetails(token, performanceId)
+                }
+                val deferredCompetition = async {
+                    ApiClient.apiService.getCompetitionDetails(token, competitionId.toInt())
+                }
+                val deferredCourse = async {
+                    ApiClient.apiService.getCourseDetails(token, courseId.toInt())
+                }
+                val deferredCompetitor = async {
+                    ApiClient.apiService.getAllCompetitors(token)
+                        .firstOrNull { it.id == competitorId.toInt() }
+                }
+
+                performanceDetails = deferredDetails.await()
+                competition = deferredCompetition.await()
+                course = deferredCourse.await()
+                competitor = deferredCompetitor.await()
+                loading = false
+
+            } catch (e: Exception) {
+                error = "Erreur de chargement: ${e.message}"
+                loading = false
+            }
+        }
+    }
+
     ScreenScaffold(
         title = "Détails participant",
         navController = navController
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                "Détails du participant",
-                style = MaterialTheme.typography.headlineMedium
-            )
+            when {
+                loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Compétition ID: $competitionId")
-                    Text("Parcours ID: $courseId")
-                    Text("Participant ID: $competitorId")
-                    Text("Classement: $rank")
+                error != null -> Text(
+                    text = error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+                performanceDetails == null -> Text(
+                    "Aucune donnée disponible",
+                    modifier = Modifier.align(Alignment.Center)
+                )
+
+                else -> PerformanceDetailsContent(
+                    competition = competition!!,
+                    course = course!!,
+                    competitor = competitor!!,
+                    rank = rank,
+                    performanceDetails = performanceDetails!!
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PerformanceDetailsContent(
+    competition: Competition,
+    course: Courses,
+    competitor: Competitor,
+    rank: String,
+    performanceDetails: PerformanceDetails
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // En-tête
+        Text(
+            "Détails de la performance",
+            style = MaterialTheme.typography.headlineMedium
+        )
+
+        // Informations générales
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(8.dp)
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "Compétition: ${competition.name}",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text("Parcours: ${course.name}")
+                Text("Participant: ${competitor.first_name} ${competitor.last_name}")
+                Text("Classement: $rank")
+                Text("Temps total: ${performanceDetails.totalTime / 1000}s")
+                Text("Statut: ${performanceDetails.status.replaceFirstChar { it.uppercase() }}")
+            }
+        }
+
+        // Liste des obstacles
+        Text(
+            "Détail par obstacle",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        if (performanceDetails.isNullOrEmpty()) {
+            Text("Aucun obstacle enregistré")
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(performanceDetails.obstacles.sortedBy { it.obstaclePosition }) { obstacle ->
+                    ObstacleTimeCard(obstacle)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ObstacleTimeCard(obstacle: ObstacleTime) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    obstacle.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text("Position: ${obstacle.obstaclePosition}")
+            }
+            Text(
+                "${obstacle.time / 1000}s",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
