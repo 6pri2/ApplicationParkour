@@ -3,7 +3,6 @@ package iut.gon.applicationparkour.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,11 +47,11 @@ fun ResultScreen(navController: NavController, competitionId: String, courseId: 
         scope.launch {
             try {
                 val deferredCompetition = async {
-                    ApiClient.apiService.getCompetitionDetails(token, competitionId.toInt())
+                    ApiClient.apiService.getCompetitionDetails(competitionId.toInt())
                 }
 
                 val deferredCourse = async {
-                    ApiClient.apiService.getCourseDetails(token, courseId.toInt())
+                    ApiClient.apiService.getCourseById(courseId.toInt())
                 }
 
                 val deferredCompetitors = async {

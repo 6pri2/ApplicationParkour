@@ -13,7 +13,7 @@ import iut.gon.applicationparkour.data.model.Obstacles
 import iut.gon.applicationparkour.data.model.Obstaclesv2
 import iut.gon.applicationparkour.data.model.PerformanceAPI
 import iut.gon.applicationparkour.data.model.UpdateObstaclePositionRequest
-import iut.gon.applicationparkour.ui.components.performance.PerformanceResponse
+import iut.gon.applicationparkour.data.model.PerformanceResponse
 import iut.gon.applicationparkour.data.model.Performance
 import iut.gon.applicationparkour.data.model.PerformanceObstacle
 import retrofit2.Response
@@ -105,7 +105,7 @@ interface ApiService {
     ): List<Competitor>
 
     @GET("performances")
-    suspend fun getPerformances(@Header("Authorization") token: String = TOKEN): List<PerformanceResponse>
+    suspend fun getPerformances(@Header("Authorization") token: String = TOKEN): List<Performance>
 
     @GET("courses/{id}")
     suspend fun getCourseById(

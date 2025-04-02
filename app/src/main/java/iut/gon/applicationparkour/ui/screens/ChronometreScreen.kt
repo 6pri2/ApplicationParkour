@@ -42,7 +42,7 @@ import iut.gon.applicationparkour.data.model.ObstacleResultAPI
 import iut.gon.applicationparkour.data.model.Obstacles
 import iut.gon.applicationparkour.data.model.Obstaclesv2
 import iut.gon.applicationparkour.data.model.PerformanceAPI
-import iut.gon.applicationparkour.ui.components.performance.PerformanceResponse
+import iut.gon.applicationparkour.data.model.PerformanceResponse
 import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -56,7 +56,6 @@ fun ChronometreScreen(
     courseId: String,
     competitorId: String
 ) {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     val scope = rememberCoroutineScope()
 
     var obstacles by remember { mutableStateOf<List<Obstaclesv2>>(emptyList()) }
@@ -125,7 +124,7 @@ fun ChronometreScreen(
 
                     runBlocking { launch { delay(1000) } }
 
-                    var p = ApiClient.apiService.getPerformances(token)
+                    var p = ApiClient.apiService.getPerformances()
                     println(p.size)
                     p = p.filter { it.competitor_id == competitorId.toInt()
                             && it.course_id == courseId.toInt()  }

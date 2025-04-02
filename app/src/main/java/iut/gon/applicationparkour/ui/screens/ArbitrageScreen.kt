@@ -32,7 +32,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ArbitrageScreen(navController: NavController, competitionId: String, courseId: String) {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     var inscriptions by remember { mutableStateOf<List<Competitor>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
