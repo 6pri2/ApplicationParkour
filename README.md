@@ -21,7 +21,7 @@ Application Android pour l'arbitrage des compétitions de parkour - Projet R4.11
 
 - **Synchronisation** :
   - Stockage local pour un arbitrage sans latence
- 
+
 ```bash
 app/
 │
@@ -32,49 +32,43 @@ app/
 │   └── iut.gon.applicationparkour/
 │       │
 │       ├── data/
-│       │   └── api/
-│       │       ├── ApiClient.kt
-│       │       ├── ApiService.kt
+│       │   ├── api/
+│       │   │   ├── ApiClient.kt
+│       │   │   └── ApiService.kt
+│       │   └── model/
 │       │       ├── AddCompetitorRequest.kt
 │       │       ├── AddObstacleRequest.kt
+│       │       ├── Competition.kt
+│       │       ├── Competitor.kt
+│       │       ├── Courses.kt
 │       │       ├── CourseUpdateRequest.kt
 │       │       ├── CreateCourseRequest.kt
+│       │       ├── ObstacleCourse.kt
+│       │       ├── Obstacles.kt
 │       │       └── UpdateObstaclePositionRequest.kt
 │       │
-│       ├── model/
-│       │   ├── Competition.kt
-│       │   ├── Competitor.kt
-│       │   ├── Courses.kt
-│       │   ├── ObstacleCourse.kt
-│       │   └── Obstacles.kt
-│       │
 │       ├── ui/
+│       │   ├── app/
+│       │   │   └── ParkourApp.kt
 │       │   ├── components/
 │       │   │   ├── competition/
 │       │   │   │   ├── CompetitionEditDialog.kt
 │       │   │   │   ├── CompetitionItem.kt
-│       │   │   │   ├── calculateAge.kt
 │       │   │   │   └── DeleteCompetitionDialog.kt
-│       │   │   │
 │       │   │   ├── competitor/
 │       │   │   │   ├── AddCompetitorDialog.kt
-│       │   │   │   ├── CourseEditDialog.kt
-│       │   │   │   ├── CourseItem.kt
+│       │   │   │   ├── calculateAge.kt
 │       │   │   │   └── CompetitorCard.kt
-│       │   │   │
 │       │   │   ├── courses/
 │       │   │   │   ├── CourseAddDialog.kt
 │       │   │   │   ├── CourseEditDialog.kt
 │       │   │   │   ├── CourseItem.kt
 │       │   │   │   └── CourseItemModif.kt
-│       │   │   │
 │       │   │   ├── obstacle/
 │       │   │   │   ├── AddObstacleDialog.kt
 │       │   │   │   └── ObstacleItem.kt
-│       │   │   │
 │       │   │   └── scaffold/
 │       │   │       └── ScreenScaffold.kt
-│       │   │
 │       │   └── screens/
 │       │       ├── ArbitrageScreen.kt
 │       │       ├── CompetitionArbitrageScreen.kt
@@ -82,14 +76,11 @@ app/
 │       │       ├── CompetitionCoursesScreen.kt
 │       │       ├── CompetitionResultsScreen.kt
 │       │       ├── CompetitionScreen.kt
+│       │       ├── CompetitorScreen.kt
 │       │       ├── CourseObstaclesScreen.kt
 │       │       ├── ObstaclesScreen.kt
 │       │       ├── ResultScreen.kt
 │       │       └── WelcomeScreen.kt
-│       │
-│       ├── navigation/
-│       │   ├── NavGraph.kt
-│       │   └── Routes.kt
 │       │
 │       └── theme/
 │           ├── Color.kt
@@ -97,7 +88,6 @@ app/
 │           └── Type.kt
 │
 └── MainActivity.kt
-
 
 ## 📱 Navigation principale
 
