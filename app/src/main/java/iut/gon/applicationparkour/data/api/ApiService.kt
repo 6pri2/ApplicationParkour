@@ -10,6 +10,7 @@ import iut.gon.applicationparkour.data.model.CreateCourseRequest
 import iut.gon.applicationparkour.data.model.ObstacleCourse
 import iut.gon.applicationparkour.data.model.ObstacleResultAPI
 import iut.gon.applicationparkour.data.model.Obstacles
+import iut.gon.applicationparkour.data.model.Obstaclesv2
 import iut.gon.applicationparkour.data.model.PerformanceAPI
 import iut.gon.applicationparkour.data.model.UpdateObstaclePositionRequest
 import iut.gon.applicationparkour.ui.components.performance.PerformanceResponse
@@ -54,7 +55,7 @@ interface ApiService {
     suspend fun getCourseObstaclesv2(
         @Path("courseId") courseId: Int,
         @Header("Authorization") token: String = TOKEN
-    ): List<Obstacles>
+    ): List<Obstaclesv2>
 
     @GET("courses/{id}/unused_obstacles")
     suspend fun getUnusedObstacles(

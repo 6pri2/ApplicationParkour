@@ -40,6 +40,7 @@ import iut.gon.applicationparkour.data.model.Courses
 import iut.gon.applicationparkour.data.model.ObstacleResult
 import iut.gon.applicationparkour.data.model.ObstacleResultAPI
 import iut.gon.applicationparkour.data.model.Obstacles
+import iut.gon.applicationparkour.data.model.Obstaclesv2
 import iut.gon.applicationparkour.data.model.PerformanceAPI
 import iut.gon.applicationparkour.ui.components.performance.PerformanceResponse
 import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold
@@ -58,7 +59,7 @@ fun ChronometreScreen(
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     val scope = rememberCoroutineScope()
 
-    var obstacles by remember { mutableStateOf<List<Obstacles>>(emptyList()) }
+    var obstacles by remember { mutableStateOf<List<Obstaclesv2>>(emptyList()) }
     var currentObstacleIndex by remember { mutableStateOf(0) }
     var recordedResults by remember { mutableStateOf<List<ObstacleResult>>(emptyList()) }
     var isRunning by remember { mutableStateOf(false) }
@@ -316,7 +317,7 @@ fun ChronometreScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Obstacle ${currentObstacleIndex + 1}/${obstacles.size}: ${obstacle.name}",
+                        text = "Obstacle ${currentObstacleIndex + 1}/${obstacles.size}: ${obstacle.obstacle_name}",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -351,7 +352,7 @@ fun ChronometreScreen(
                             ListItem(
                                 headlineContent = {
                                     Text(
-                                        "${index + 1}. ${obstacle?.name ?: "Inconnu"} : " +
+                                        "${index + 1}. ${obstacle?.obstacle_name ?: "Inconnu"} : " +
                                                 "$seconds.${tenth}s (${result.status})",
                                         style = MaterialTheme.typography.bodyLarge
                                     )
