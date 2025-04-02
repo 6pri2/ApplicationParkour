@@ -107,6 +107,9 @@ interface ApiService {
     @GET("performances")
     suspend fun getPerformances(@Header("Authorization") token: String = TOKEN): List<Performance>
 
+    @GET("performances")
+    suspend fun getPerformancesv2(@Header("Authorization") token: String = TOKEN): List<PerformanceResponse>
+
     @GET("courses/{id}")
     suspend fun getCourseById(
         @Path("id") courseId: Int,
