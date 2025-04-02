@@ -80,10 +80,11 @@ fun ParkourApp() {
         }
 
         composable(
-            "competitorDetails/{competitionId}/{courseId}/{competitorId}/{rank}"
+            "competitorDetails/{competitionId}/{courseId}/{competitorId}/{rank}/{performanceId}"
         ) { backStackEntry ->
             CompetitorDetailsScreen(
                 navController = navController,
+                performanceId = backStackEntry.arguments?.getString("performanceId") ?: "",
                 competitionId = backStackEntry.arguments?.getString("competitionId") ?: "",
                 courseId = backStackEntry.arguments?.getString("courseId") ?: "",
                 competitorId = backStackEntry.arguments?.getString("competitorId") ?: "",

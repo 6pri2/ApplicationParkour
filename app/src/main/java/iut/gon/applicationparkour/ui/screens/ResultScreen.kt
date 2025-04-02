@@ -149,7 +149,7 @@ fun ResultScreen(navController: NavController, competitionId: String, courseId: 
                     competitors = competitors!!,
                     performances = performances!!,
                     onCompetitorClick = { perf, rank ->
-                        navController.navigate("competitorDetails/${competitionId}/${courseId}/${perf.competitorId}/$rank")
+                        navController.navigate("competitorDetails/${competitionId}/${courseId}/${perf.competitorId}/$rank/${perf.id}")
                     }
                 )
             }
@@ -304,6 +304,7 @@ private fun PodiumCard(
 @Composable
 fun CompetitorDetailsScreen(
     navController: NavController,
+    performanceId: String,
     competitionId: String,
     courseId: String,
     competitorId: String,
@@ -312,7 +313,6 @@ fun CompetitorDetailsScreen(
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     val scope = rememberCoroutineScope()
 
-    var performanceDetails by remember { mutableStateOf<PerformanceDetails?>(null) }
     var competition by remember { mutableStateOf<Competition?>(null) }
     var course by remember { mutableStateOf<Courses?>(null) }
     var competitor by remember { mutableStateOf<Competitor?>(null) }
@@ -322,15 +322,6 @@ fun CompetitorDetailsScreen(
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                val performances = ApiClient.apiService.getPerformances(token)
-                val performanceId = performances.firstOrNull {
-                    it.competitorId == competitorId.toInt() &&
-                            it.courseId == courseId.toInt()
-                }?.id ?: throw Exception("Performance non trouvée")
-
-                val deferredDetails = async {
-                    ApiClient.apiService.getPerformanceDetails(token, performanceId)
-                }
                 val deferredCompetition = async {
                     ApiClient.apiService.getCompetitionDetails(token, competitionId.toInt())
                 }
@@ -342,12 +333,10 @@ fun CompetitorDetailsScreen(
                         .firstOrNull { it.id == competitorId.toInt() }
                 }
 
-                performanceDetails = deferredDetails.await()
                 competition = deferredCompetition.await()
                 course = deferredCourse.await()
                 competitor = deferredCompetitor.await()
                 loading = false
-
             } catch (e: Exception) {
                 error = "Erreur de chargement: ${e.message}"
                 loading = false
@@ -364,109 +353,55 @@ fun CompetitorDetailsScreen(
                 .fillMaxSize()
         ) {
             when {
-                loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                loading -> {
+                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                }
+                error != null -> {
+                    Text(
+                        text = error!!,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                else -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // ID Performance
+                        Text(
+                            text = "ID Performance: $performanceId",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
 
-                error != null -> Text(
-                    text = error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                performanceDetails == null -> Text(
-                    "Aucune donnée disponible",
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                        // Compétition
+                        Text(
+                            text = "Compétition: ${competition?.name ?: "Non disponible"}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
 
-                else -> PerformanceDetailsContent(
-                    competition = competition!!,
-                    course = course!!,
-                    competitor = competitor!!,
-                    rank = rank,
-                    performanceDetails = performanceDetails!!
-                )
-            }
-        }
-    }
-}
+                        // Parcours
+                        Text(
+                            text = "Parcours: ${course?.name ?: "Non disponible"}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
 
-@Composable
-private fun PerformanceDetailsContent(
-    competition: Competition,
-    course: Courses,
-    competitor: Competitor,
-    rank: String,
-    performanceDetails: PerformanceDetails
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // En-tête
-        Text(
-            "Détails de la performance",
-            style = MaterialTheme.typography.headlineMedium
-        )
+                        // Participant
+                        Text(
+                            text = "Participant: ${competitor?.let { "${it.first_name} ${it.last_name}" } ?: "Non disponible"}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
 
-        // Informations générales
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Text(
-                    "Compétition: ${competition.name}",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text("Parcours: ${course.name}")
-                Text("Participant: ${competitor.first_name} ${competitor.last_name}")
-                Text("Classement: $rank")
-                Text("Temps total: ${performanceDetails.totalTime / 1000}s")
-                Text("Statut: ${performanceDetails.status.replaceFirstChar { it.uppercase() }}")
-            }
-        }
-
-        // Liste des obstacles
-        Text(
-            "Détail par obstacle",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        if (performanceDetails.isNullOrEmpty()) {
-            Text("Aucun obstacle enregistré")
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(performanceDetails.obstacles.sortedBy { it.obstaclePosition }) { obstacle ->
-                    ObstacleTimeCard(obstacle)
+                        // Classement
+                        Text(
+                            text = "Classement: $rank",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ObstacleTimeCard(obstacle: ObstacleTime) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(
-                    obstacle.name,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text("Position: ${obstacle.obstaclePosition}")
-            }
-            Text(
-                "${obstacle.time / 1000}s",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }
