@@ -213,43 +213,53 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: In
                     color = MaterialTheme.colorScheme.error
                 )
 
-                competitors.isNullOrEmpty() -> Text("Aucun compétiteur trouvé")
                 else -> {
                     Column(
                         modifier = Modifier.Companion.fillMaxSize()
                     ) {
-                        LazyColumn(
-                            modifier = Modifier.Companion.weight(1f)
-                        ) {
-                            items(competitors!!) { competitor ->
-                                Card(
-                                    modifier = Modifier.Companion
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
-                                    elevation = CardDefaults.cardElevation(4.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.Companion.fillMaxWidth(),
-                                        verticalAlignment = Alignment.Companion.CenterVertically
+                        if (competitors.isNullOrEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Aucun compétiteur trouvé")
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.Companion.weight(1f)
+                            ) {
+                                items(competitors!!) { competitor ->
+                                    Card(
+                                        modifier = Modifier.Companion
+                                            .fillMaxWidth()
+                                            .padding(8.dp),
+                                        elevation = CardDefaults.cardElevation(4.dp)
                                     ) {
-                                        Column(
-                                            modifier = Modifier.Companion
-                                                .weight(1f)
-                                                .padding(16.dp)
+                                        Row(
+                                            modifier = Modifier.Companion.fillMaxWidth(),
+                                            verticalAlignment = Alignment.Companion.CenterVertically
                                         ) {
-                                            Text("Nom: ${competitor.last_name}")
-                                            Text("Prénom: ${competitor.first_name}")
-                                            Text("Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
-                                        }
+                                            Column(
+                                                modifier = Modifier.Companion
+                                                    .weight(1f)
+                                                    .padding(16.dp)
+                                            ) {
+                                                Text("Nom: ${competitor.last_name}")
+                                                Text("Prénom: ${competitor.first_name}")
+                                                Text("Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+                                            }
 
-                                        IconButton(
-                                            onClick = { competitorToDelete = competitor }
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Remove,
-                                                contentDescription = "Retirer de la compétition",
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
+                                            IconButton(
+                                                onClick = { competitorToDelete = competitor }
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Remove,
+                                                    contentDescription = "Retirer de la compétition",
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
                                         }
                                     }
                                 }
