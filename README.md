@@ -111,8 +111,8 @@ graph TD
     E --> J[Compétiteurs]
     
     %% Actions Concurrents
-    J --> J1[Modifier Concurrent]
-    J --> J2[Supprimer Concurrent]
+    J --> J1[Ajouter Compétiteur]
+    J --> J2[Supprimer Compétiteur]
     
     %% Actions Arbitrage
     E --> L[Arbitrage]
