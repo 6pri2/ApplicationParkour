@@ -23,72 +23,80 @@ Application Android pour l'arbitrage des compétitions de parkour - Projet R4.11
   - Stockage local pour un arbitrage sans latence
  
 
-## 📂 app
+app/
+│
+├── manifests/
+│   └── AndroidManifest.xml
+│
+├── kotlin+java/
+│   └── iut.gon.applicationparkour/
+│       │
+│       ├── data/
+│       │   └── api/
+│       │       ├── ApiClient.kt
+│       │       ├── ApiService.kt
+│       │       ├── AddCompetitorRequest.kt
+│       │       ├── AddObstacleRequest.kt
+│       │       ├── CourseUpdateRequest.kt
+│       │       ├── CreateCourseRequest.kt
+│       │       └── UpdateObstaclePositionRequest.kt
+│       │
+│       ├── model/
+│       │   ├── Competition.kt
+│       │   ├── Competitor.kt
+│       │   ├── Courses.kt
+│       │   ├── ObstacleCourse.kt
+│       │   └── Obstacles.kt
+│       │
+│       ├── ui/
+│       │   ├── components/
+│       │   │   ├── competition/
+│       │   │   │   ├── CompetitionEditDialog.kt
+│       │   │   │   ├── CompetitionItem.kt
+│       │   │   │   └── DeleteCompetitionDialog.kt
+│       │   │   │
+│       │   │   ├── competitor/
+│       │   │   │   ├── AddCompetitorDialog.kt
+│       │   │   │   ├── calculateAge.kt
+│       │   │   │   └── CompetitorCard.kt
+│       │   │   │
+│       │   │   ├── courses/
+│       │   │   │   ├── CourseAddDialog.kt
+│       │   │   │   ├── CourseEditDialog.kt
+│       │   │   │   ├── CourseItem.kt
+│       │   │   │   └── CourseItemModif.kt
+│       │   │   │
+│       │   │   ├── obstacle/
+│       │   │   │   ├── AddObstacleDialog.kt
+│       │   │   │   └── ObstacleItem.kt
+│       │   │   │
+│       │   │   └── scaffold/
+│       │   │       └── ScreenScaffold.kt
+│       │   │
+│       │   └── screens/
+│       │       ├── ArbitrageScreen.kt
+│       │       ├── CompetitionArbitrageScreen.kt
+│       │       ├── CompetitionCompetitorsScreen.kt
+│       │       ├── CompetitionCoursesScreen.kt
+│       │       ├── CompetitionResultsScreen.kt
+│       │       ├── CompetitionScreen.kt
+│       │       ├── CompetitorScreen.kt
+│       │       ├── CourseObstaclesScreen.kt
+│       │       ├── ObstaclesScreen.kt
+│       │       ├── ResultScreen.kt
+│       │       └── WelcomeScreen.kt
+│       │
+│       ├── navigation/
+│       │   ├── NavGraph.kt
+│       │   └── Routes.kt
+│       │
+│       └── theme/
+│           ├── Color.kt
+│           ├── Theme.kt
+│           └── Type.kt
+│
+└── MainActivity.kt
 
-### 📂 manifests
-- `AndroidManifest.xml`
-
-### 📂 kotlin+java
-#### 📂 iut.gon.applicationparkour
-
-##### 📂 data
-- 📂 api
-  - `ApiClient`
-  - `ApiService`
-- 📂 model
-  - `AddCompetitorRequest`
-  - `AddObstacleRequest`
-  - `Competition`
-  - `Competitor`
-  - `Courses`
-  - `CourseUpdateRequest`
-  - `CreateCourseRequest`
-  - `ObstacleCourse`
-  - `Obstacles`
-  - `UpdateObstaclePositionRequest`
-
-##### 📂 ui
-- 📂 app
-  - `ParkourApp.kt`
-- 📂 components
-  - 📂 competition
-    - `CompetitionEditDialog.kt`
-    - `CompetitionItem.kt`
-    - `DeleteCompetitionDialog.kt`
-  - 📂 competitor
-    - `AddCompetitorDialog.kt`
-    - `calculateAge.kt`
-    - `CompetitorCard.kt`
-  - 📂 courses
-    - `CourseAddDialog.kt`
-    - `CourseEditDialog.kt`
-    - `CourseItem.kt`
-    - `CourseItemModif.kt`
-  - 📂 obstacle
-    - `AddObstacleDialog.kt`
-    - `ObstacleItem.kt`
-  - 📂 scaffold
-    - `ScreenScaffold.kt`
-
-##### 📂 screens
-- `ArbitrageScreen.kt`
-- `CompetitionArbitrageScreen.kt`
-- `CompetitionCompetitorsScreen.kt`
-- `CompetitionCoursesScreen.kt`
-- `CompetitionResultsScreen.kt`
-- `CompetitionScreen.kt`
-- `CompetitorScreen.kt`
-- `CourseObstaclesScreen.kt`
-- `ObstaclesScreen.kt`
-- `ResultScreen.kt`
-- `WelcomeScreen.kt`
-
-##### 📂 theme
-- `Color.kt`
-- `Theme.kt`
-- `Type.kt`
-
-- `MainActivity.kt`
 
 ## 📱 Navigation principale
 
