@@ -10,6 +10,7 @@ import iut.gon.applicationparkour.ui.screens.CompetitionCompetitorsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionCoursesScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionResultsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionScreen
+import iut.gon.applicationparkour.ui.screens.CompetitorDetailsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitorScreen
 import iut.gon.applicationparkour.ui.screens.CourseObstaclesScreen
 import iut.gon.applicationparkour.ui.screens.ObstaclesScreen
@@ -76,6 +77,18 @@ fun ParkourApp() {
         composable("courseObstacles/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull() ?: 0
             CourseObstaclesScreen(navController, courseId)
+        }
+
+        composable(
+            "competitorDetails/{competitionId}/{courseId}/{competitorId}/{rank}"
+        ) { backStackEntry ->
+            CompetitorDetailsScreen(
+                navController = navController,
+                competitionId = backStackEntry.arguments?.getString("competitionId") ?: "",
+                courseId = backStackEntry.arguments?.getString("courseId") ?: "",
+                competitorId = backStackEntry.arguments?.getString("competitorId") ?: "",
+                rank = backStackEntry.arguments?.getString("rank") ?: ""
+            )
         }
     }
 }

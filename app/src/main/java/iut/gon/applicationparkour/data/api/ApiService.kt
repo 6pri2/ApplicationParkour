@@ -72,6 +72,12 @@ interface ApiService {
         @Path("id") competitionId: Int
     ): List<Courses>
 
+    @GET("courses/{id}")
+    suspend fun getCourseDetails(
+        @Header("Authorization") token: String,
+        @Path("id") courseId: Int
+    ): Courses
+
     @GET("performances")
     suspend fun getPerformances(
         @Header("Authorization") token: String
