@@ -108,7 +108,7 @@ graph TD
     E --> E1[Modifier Compétition]
     E --> E2[Supprimer Compétition]
     E --> I[Classement]
-    E --> J[Gestion Concurrents]
+    E --> J[Compétiteurs]
     
     %% Actions Concurrents
     J --> J1[Modifier Concurrent]
