@@ -50,7 +50,6 @@ import kotlin.collections.plus
 
 @Composable
 fun CompetitionCompetitorsScreen(navController: NavController, competitionId: Int) {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
     var allCompetitors by remember { mutableStateOf<List<Competitor>?>(null) }
     var competition by remember { mutableStateOf<Competition?>(null) }
@@ -65,9 +64,9 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: In
     LaunchedEffect(competitionId) {
         try {
             val compId = competitionId
-            competition = ApiClient.apiService.getCompetitionDetails(token, compId)
-            competitors = ApiClient.apiService.getCompetitorsByCompetition(token, compId)
-            allCompetitors = ApiClient.apiService.getAllCompetitors(token)
+            competition = ApiClient.apiService.getCompetitionDetails( compId)
+            competitors = ApiClient.apiService.getCompetitorsByCompetition( compId)
+            allCompetitors = ApiClient.apiService.getAllCompetitors()
             isLoading = false
         } catch (e: Exception) {
             error = "Erreur lors du chargement: ${e.localizedMessage}"
@@ -94,7 +93,6 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: In
                         coroutineScope.launch {
                             try {
                                 ApiClient.apiService.removeCompetitorFromCompetition(
-                                    token,
                                     competitionId,
                                     competitor.id
                                 )
@@ -161,7 +159,6 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: In
 
                                 selectedCompetitors.forEach { competitorId ->
                                     val response = ApiClient.apiService.addCompetitorToCompetition(
-                                        token,
                                         competitionId,
                                         AddCompetitorRequest(competitorId)
                                     )

@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompetitorScreen(navController: NavController) {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+
     var competitors by remember { mutableStateOf<List<Competitor>?>(null) }
     var filteredCompetitors by remember { mutableStateOf<List<Competitor>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
@@ -91,7 +91,7 @@ fun CompetitorScreen(navController: NavController) {
     val updateCompetitors = {
         scope.launch {
             try {
-                competitors = ApiClient.apiService.getCompetitors(token)
+                competitors = ApiClient.apiService.getCompetitors()
                 filterCompetitors(searchQuery) // Appliquer le filtre après le chargement
             } catch (e: Exception) {
                 println("Erreur lors du chargement des compétiteurs : ${e.message}")
@@ -112,7 +112,6 @@ fun CompetitorScreen(navController: NavController) {
     // Dialog pour ajouter/modifier un compétiteur
     if (showDialog) {
         AddCompetitorDialog(
-            token = token,
             competitor = competitorToEdit,
             onDismiss = { showDialog = false },
             onCompetitorsUpdated = {
@@ -135,7 +134,7 @@ fun CompetitorScreen(navController: NavController) {
                     onClick = {
                         scope.launch {
                             try {
-                                ApiClient.apiService.deleteCompetitor(token, competitorToDelete!!.id)
+                                ApiClient.apiService.deleteCompetitor(competitorToDelete!!.id)
                                 updateCompetitors()
                                 showDeleteDialog = false
                             } catch (e: Exception) {

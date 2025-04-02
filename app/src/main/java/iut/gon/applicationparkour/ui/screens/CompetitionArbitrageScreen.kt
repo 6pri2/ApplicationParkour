@@ -31,7 +31,6 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun CompetitionArbitrageScreen(navController: NavController, competitionId: String) {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     var courses by remember { mutableStateOf<List<Courses>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -45,7 +44,7 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
         scope.launch {
             isLoading = true
             try {
-                courses = ApiClient.apiService.getCompetitionCourses(token, competitionId.toInt())
+                courses = ApiClient.apiService.getCompetitionCourses(competitionId.toInt())
                 isLoading = false
             } catch (e: Exception) {
                 isLoading = false

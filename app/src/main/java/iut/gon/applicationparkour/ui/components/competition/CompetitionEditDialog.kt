@@ -176,7 +176,6 @@ fun CompetitionEditDialog(
                                     try {
                                         val createdCompetition =
                                             ApiClient.apiService.addCompetition(
-                                                token,
                                                 newCompetition
                                             )
                                         navController.navigate("competitionCourses/${createdCompetition.id}") {
@@ -236,13 +235,11 @@ fun CompetitionEditDialog(
                                 try {
                                     if (competition == null) {
                                         val response = ApiClient.apiService.addCompetition(
-                                            token,
                                             updatedCompetition
                                         )
                                         println("Réponse: $response")
                                     } else {
                                         val response = ApiClient.apiService.updateCompetition(
-                                            token,
                                             competition.id,
                                             updatedCompetition
                                         )

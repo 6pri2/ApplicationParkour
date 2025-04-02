@@ -44,7 +44,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompetitionCoursesScreen(navController: NavController, competitionId: String, onFinalSave: () -> Unit) {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     var courses by remember { mutableStateOf<List<Courses>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -62,7 +61,7 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
         scope.launch {
             isLoading = true
             try {
-                courses = ApiClient.apiService.getCompetitionCourses(token, competitionId.toInt())
+                courses = ApiClient.apiService.getCompetitionCourses(competitionId.toInt())
                     .sortedBy { it.position }
                 isLoading = false
             } catch (e: Exception) {
@@ -88,7 +87,7 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                     is_over = course.is_over
                 )
                 // Note: Tu devras ajouter cette méthode dans ton interface ApiService
-                ApiClient.apiService.updateCourse(token, course.id, updatedCourse)
+                ApiClient.apiService.updateCourse(course.id, updatedCourse)
                 loadCourses()
             } catch (e: Exception) {
                 error = "Erreur de mise à jour: ${e.message}"
@@ -100,7 +99,7 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
     fun deleteCourse(courseId: Int) {
         scope.launch {
             try {
-                ApiClient.apiService.deleteCourse(token, courseId)
+                ApiClient.apiService.deleteCourse(courseId)
                 loadCourses()
             } catch (e: Exception) {
                 error = "Erreur de suppression: ${e.message}"
@@ -154,7 +153,7 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                         position = newPosition,
                         is_over = course.is_over
                     )
-                    ApiClient.apiService.updateCourse(token, courseId, updatedCourse)
+                    ApiClient.apiService.updateCourse(courseId, updatedCourse)
                 }
                 tempPositions = emptyMap()
                 loadCourses()
@@ -193,7 +192,7 @@ fun CompetitionCoursesScreen(navController: NavController, competitionId: String
                     try {
                         // 1. Créer le parcours
                         val createdCourse = ApiClient.apiService.addCourse(
-                            token,
+
                             CreateCourseRequest(
                                 name = newCourse.name,
                                 max_duration = newCourse.max_duration,

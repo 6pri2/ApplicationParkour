@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AddCompetitorDialog(
-    token: String,
     competitor: Competitor? = null, // Si un compétiteur est passé, on le modifie
     onDismiss: () -> Unit,
     onCompetitorsUpdated: () -> Unit // Callback pour mettre à jour la liste des compétiteurs
@@ -138,12 +137,12 @@ fun AddCompetitorDialog(
                             try {
                                 if (competitor == null) {
                                     // Ajout d'un nouveau compétiteur
-                                    ApiClient.apiService.addCompetitor(token, updatedCompetitor)
+                                    ApiClient.apiService.addCompetitor(updatedCompetitor)
 
                                 } else {
                                     // Mise à jour du compétiteur
                                     ApiClient.apiService.updateCompetitor(
-                                        token,
+
                                         updatedCompetitor.id,
                                         updatedCompetitor
                                     )
