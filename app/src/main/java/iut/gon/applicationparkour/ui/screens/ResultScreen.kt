@@ -21,19 +21,10 @@ fun ResultScreen(navController: NavController, competitionId: String, courseId: 
         title = "Résultat du parcours",
         navController = navController
     ) {
-        Box(
-            modifier = Modifier.Companion.fillMaxSize(),
-            contentAlignment = Alignment.Companion.Center
-        ) {
-            Column(horizontalAlignment = Alignment.Companion.CenterHorizontally) {
-                Text(
-                    "Résultat du parcours: ${courseId}",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Text(
-                    "Compétition: ${competitionId}",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Résultat du parcours: ${courseId}", style = MaterialTheme.typography.headlineMedium)
+                Text("Compétition: ${competitionId}", style = MaterialTheme.typography.headlineSmall)
                 // Ajoutez ici les détails des résultats
             }
         }

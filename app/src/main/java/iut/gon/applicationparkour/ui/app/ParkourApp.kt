@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import iut.gon.applicationparkour.ui.screens.ArbitrageScreen
+import iut.gon.applicationparkour.ui.screens.ChronometreScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionArbitrageScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionCompetitorsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionCoursesScreen
@@ -76,6 +77,18 @@ fun ParkourApp() {
         composable("courseObstacles/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull() ?: 0
             CourseObstaclesScreen(navController, courseId)
+        }
+
+        composable("chronometre/{competitionId}/{courseId}/{competitorId}") { backStackEntry ->
+            val competitionId = backStackEntry.arguments?.getString("competitionId") ?: ""
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+            val competitorId = backStackEntry.arguments?.getString("competitorId") ?: ""
+            ChronometreScreen(
+                navController = navController,
+                competitionId = competitionId,
+                courseId = courseId,
+                competitorId = competitorId
+            )
         }
     }
 }
