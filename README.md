@@ -94,9 +94,9 @@ app/
 ## 📱 Navigation principale
 
 ```mermaid
-    A[Accueil] --> B[[Competition]]
-    A --> C[[Competiteur]]
-    A --> D[[Obstacles]]
+    A[Accueil] --> B[["Competition"]]
+    A --> C[["Competiteur"]]
+    A --> D[["Obstacles"]]
     
     B --> E[Liste Compétitions]
     C --> F[Liste Participants]
@@ -114,4 +114,3 @@ app/
     F --> O[Ajouter Participant]
     F --> P[Modifier Participant]
     F --> Q[Supprimer Participant]
-    
