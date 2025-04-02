@@ -106,7 +106,7 @@ graph TD
     
     E --> I[Détails Compétition]
     I --> J[Parcours]
-    I --> K[Concurrents]
+    I --> K[Gestion Concurrents]
     I --> L[Arbitrage]
     
     %% Actions pour Liste Compétitions
@@ -116,15 +116,16 @@ graph TD
     %% Actions pour Détails Compétition
     I --> I1[Classement]
     
-    %% Actions pour Concurrents
-    K --> K1[Modifier Concurrent]
-    K --> K2[Supprimer Concurrent]
+    %% Actions pour Gestion Concurrents (niveau correct)
+    K --> K1[Modifier]
+    K --> K2[Supprimer]
     
     %% Actions pour Arbitrage
     L --> L1[Chronomètre Obstacle]
-    L --> L2[Noter Concurrent]
+    L --> L2[Noter]
     
     %% Actions pour Liste Participants
-    F --> O[Ajouter Participant]
-    F --> P[Modifier Participant]
-    F --> Q[Supprimer Participant]
+    F --> O[Ajouter]
+    F --> P[Modifier]
+    F --> Q[Supprimer]
+    
