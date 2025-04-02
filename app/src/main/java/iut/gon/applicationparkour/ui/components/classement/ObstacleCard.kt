@@ -37,7 +37,7 @@ fun ObstacleCard(obstacle: PerformanceObstacle) {
     LaunchedEffect(obstacle.obstacle_id) {
         try {
             val obstacleDetails =
-                ApiClient.apiService.getObstacleDetails(token, obstacle.obstacle_id)
+                ApiClient.apiService.getObstacleDetails(obstacle.obstacle_id)
             name = obstacleDetails.name
         } catch (e: Exception) {
             name = "Obstacle inconnu"

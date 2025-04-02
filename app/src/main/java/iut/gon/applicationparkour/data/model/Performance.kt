@@ -15,6 +15,10 @@ data class Performance(
     val status: String,
     @SerializedName("total_time")
     val totalTime: Int,
+    @SerializedName("created_at")
+    val createdAt: String,
+    @SerializedName("updated_at")
+    val updatedAt: String
 )
 
 data class PerformanceResponse(

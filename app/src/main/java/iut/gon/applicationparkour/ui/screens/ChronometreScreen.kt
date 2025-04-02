@@ -126,8 +126,8 @@ fun ChronometreScreen(
 
                     var p = ApiClient.apiService.getPerformances()
                     println(p.size)
-                    p = p.filter { it.competitor_id == competitorId.toInt()
-                            && it.course_id == courseId.toInt()  }
+                    p = p.filter { it.competitorId == competitorId.toInt()
+                            && it.courseId == courseId.toInt()  }
                     println(p.size)
                     val pi = p.get(0)
 

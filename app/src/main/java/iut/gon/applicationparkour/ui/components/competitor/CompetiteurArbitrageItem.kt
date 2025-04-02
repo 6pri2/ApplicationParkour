@@ -59,8 +59,8 @@ fun CompetiteurArbitrageItem(
             // 3. Filtrage sécurisé avec vérification null
             val matching = allPerformances.filter { response ->
                 response?.let { perf ->
-                    perf.course_id == crsId &&
-                            perf.competitor_id == competitorId
+                    perf.courseId == crsId &&
+                            perf.competitorId == competitorId
                 } ?: false
             }
 

@@ -61,17 +61,17 @@ fun CompetitorDetailsScreen(
         scope.launch {
             try {
                 val deferredCompetition = async {
-                    ApiClient.apiService.getCompetitionDetails(token, competitionId.toInt())
+                    ApiClient.apiService.getCompetitionDetails(competitionId.toInt())
                 }
                 val deferredCourse = async {
-                    ApiClient.apiService.getCourseDetails(token, courseId.toInt())
+                    ApiClient.apiService.getCourseById(courseId.toInt())
                 }
                 val deferredCompetitor = async {
-                    ApiClient.apiService.getAllCompetitors(token)
+                    ApiClient.apiService.getAllCompetitors()
                         .firstOrNull { it.id == competitorId.toInt() }
                 }
                 val deferredObstacles = async {
-                    ApiClient.apiService.getPerformanceObstacles(token, performanceId.toInt())
+                    ApiClient.apiService.getPerformanceObstacles(performanceId.toInt())
                 }
 
                 competition = deferredCompetition.await()
