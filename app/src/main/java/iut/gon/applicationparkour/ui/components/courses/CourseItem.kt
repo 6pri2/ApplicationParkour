@@ -49,7 +49,7 @@ fun CourseItem(
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(text = "Durée max: ${course.max_duration} sec", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Statut: ${if (course.is_over == 1) "Terminé" else "En cours"}", style = MaterialTheme.typography.bodyMedium)
+
                 }
             }
 
