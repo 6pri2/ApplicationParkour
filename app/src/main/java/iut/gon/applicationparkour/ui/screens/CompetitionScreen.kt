@@ -2,7 +2,9 @@ package iut.gon.applicationparkour.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+
 import androidx.compose.foundation.layout.Column
+
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import iut.gon.applicationparkour.ui.components.competition.CompetitionEditDialog
@@ -60,8 +63,10 @@ fun CompetitionScreen(navController: NavController) {
 
         val scope = rememberCoroutineScope()
 
+
         // Fonction pour charger les compétitions
         fun loadCompetitions() {
+
             scope.launch {
                 isLoading = true
                 try {
@@ -173,15 +178,15 @@ fun CompetitionScreen(navController: NavController) {
         }
 
         Box(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .fillMaxSize()
         ) {
 
             when {
                 isLoading && competitions == null -> {
                     Box(
-                        Modifier.Companion.fillMaxSize(),
-                        contentAlignment = Alignment.Companion.Center
+                        Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }
@@ -189,15 +194,15 @@ fun CompetitionScreen(navController: NavController) {
 
                 competitions.isNullOrEmpty() -> {
                     Box(
-                        Modifier.Companion.fillMaxSize(),
-                        contentAlignment = Alignment.Companion.Center
+                        Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.Companion.CenterHorizontally) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Aucune compétition trouvée")
-                            Spacer(Modifier.Companion.height(16.dp))
+                            Spacer(Modifier.height(16.dp))
                             Button(
                                 onClick = { showAddDialog = true },
-                                modifier = Modifier.Companion.padding(horizontal = 32.dp)
+                                modifier = Modifier.padding(horizontal = 32.dp)
                             ) {
                                 Text("Créer une compétition")
                             }
@@ -206,8 +211,8 @@ fun CompetitionScreen(navController: NavController) {
                 }
 
                 else -> {
-                    Column(modifier = Modifier.Companion.fillMaxSize()) {
-                        LazyColumn(modifier = Modifier.Companion.weight(1f)) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(modifier = Modifier.weight(1f)) {
                             items(competitions!!) { competition ->
                                 CompetitionItem(
                                     competition = competition,
@@ -234,7 +239,7 @@ fun CompetitionScreen(navController: NavController) {
 
                         Button(
                             onClick = { showAddDialog = true },
-                            modifier = Modifier.Companion
+                            modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
                             enabled = !isLoading
@@ -247,29 +252,29 @@ fun CompetitionScreen(navController: NavController) {
 
             if (isLoading && competitions != null) {
                 Box(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
-                    contentAlignment = Alignment.Companion.Center
+                    contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
             }
 
-            Box(Modifier.Companion.align(Alignment.Companion.BottomCenter)) {
+            Box(Modifier.align(Alignment.BottomCenter)) {
                 showSuccessMessage?.let { message ->
                     Snackbar(
-                        modifier = Modifier.Companion.padding(16.dp),
+                        modifier = Modifier.padding(16.dp),
                         action = {
                             IconButton({
-                                showSuccessMessage = null
+                                showSuccessMessage = "ajouté avec succès"
                             }) { Icon(Icons.Default.Close, "Fermer") }
                         }
-                    ) { Text(message, color = MaterialTheme.colorScheme.onPrimaryContainer) }
+                    ) { Text(message, color = Color.Green) }
                 }
                 showErrorMessage?.let { message ->
                     Snackbar(
-                        modifier = Modifier.Companion.padding(16.dp),
+                        modifier = Modifier.padding(16.dp),
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         action = {
                             IconButton({

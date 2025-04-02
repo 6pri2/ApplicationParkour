@@ -60,6 +60,7 @@ fun CompetitionEditDialog(
     // Validation
     val ageMinError = remember(ageMin) {
         ageMin.toIntOrNull()?.takeIf { it <= 0 }?.let { "L'âge minimum doit être positif" }
+        ageMin.toIntOrNull()?.takeIf { it > 80 }?.let { "L'âge minimum est trop grand" }
     }
     val ageMaxError = remember(ageMax, ageMin) {
         when {

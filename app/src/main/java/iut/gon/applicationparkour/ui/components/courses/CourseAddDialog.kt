@@ -32,6 +32,7 @@ fun CourseAddDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var maxDuration by remember { mutableStateOf("") }
+        maxDuration.toIntOrNull()?.takeIf { it > 240 }?.let { "Le parcours est trop long" }
 
     AlertDialog(
         onDismissRequest = onDismiss,
