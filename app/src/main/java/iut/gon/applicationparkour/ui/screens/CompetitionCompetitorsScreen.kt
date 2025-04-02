@@ -237,9 +237,9 @@ fun CompetitionCompetitorsScreen(navController: NavController, competitionId: In
                                                 .weight(1f)
                                                 .padding(16.dp)
                                         ) {
-                                            Text("Nom: ${competitor.last_name}")
-                                            Text("Prénom: ${competitor.first_name}")
+                                            Text(competitor.last_name + " " + competitor.first_name)
                                             Text("Genre: ${if (competitor.gender == "H") "Homme" else "Femme"}")
+                                            Text(text = "Âge: ${calculateAge(competitor.born_at)} ans")
                                         }
 
                                         IconButton(

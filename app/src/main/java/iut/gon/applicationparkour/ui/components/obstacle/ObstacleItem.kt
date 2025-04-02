@@ -50,9 +50,7 @@ fun ObstacleItem(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Companion.Bold
             )
-            if (obstacle.position > 0) {
-                Text(text = "Position: ${obstacle.position}")
-            }
+
 
             Row(
                 modifier = Modifier.Companion.fillMaxWidth(),

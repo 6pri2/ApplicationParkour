@@ -1,20 +1,13 @@
 package iut.gon.applicationparkour.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,9 +27,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Page d'arbitrage d'une competition
+ * Page d'arbitrage d'une compétition
  */
-
 @Composable
 fun CompetitionArbitrageScreen(navController: NavController, competitionId: String) {
     val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
@@ -84,13 +76,13 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
         title = "Arbitrage de la compétition",
         navController = navController
     ) {
-        Box(modifier = Modifier.Companion.fillMaxSize()) {
-            Column(modifier = Modifier.Companion.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
                 when {
                     isLoading && courses.isEmpty() -> {
                         Box(
-                            modifier = Modifier.Companion.fillMaxSize(),
-                            contentAlignment = Alignment.Companion.Center
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator()
                         }
@@ -98,27 +90,28 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
 
                     error != null -> {
                         Box(
-                            modifier = Modifier.Companion.fillMaxSize(),
-                            contentAlignment = Alignment.Companion.Center
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = error!!,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
 
                     courses.isEmpty() -> {
                         Box(
-                            modifier = Modifier.Companion.fillMaxSize(),
-                            contentAlignment = Alignment.Companion.Center
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Aucun parcours trouvé pour cette compétition")
+                            Text("Aucun parcours trouvé pour cette compétition", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
 
                     else -> {
-                        LazyColumn(modifier = Modifier.Companion.weight(1f)) {
+                        LazyColumn(modifier = Modifier.weight(1f)) {
                             items(courses) { course ->
                                 CourseItem(
                                     course = course,
@@ -134,10 +127,10 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
             // Indicateur de chargement pour les opérations
             if (isLoading && courses.isNotEmpty()) {
                 Box(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
-                    contentAlignment = Alignment.Companion.Center
+                    contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
@@ -145,13 +138,13 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
 
             // Messages toast
             Box(
-                modifier = Modifier.Companion
-                    .align(Alignment.Companion.BottomCenter)
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .padding(bottom = 16.dp)
             ) {
                 showSuccessMessage?.let { message ->
                     Snackbar(
-                        modifier = Modifier.Companion.padding(16.dp),
+                        modifier = Modifier.padding(16.dp),
                         action = {
                             IconButton(onClick = { showSuccessMessage = null }) {
                                 Icon(Icons.Default.Close, "Fermer")
@@ -167,7 +160,7 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
 
                 showErrorMessage?.let { message ->
                     Snackbar(
-                        modifier = Modifier.Companion.padding(16.dp),
+                        modifier = Modifier.padding(16.dp),
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         action = {
                             IconButton(onClick = { showErrorMessage = null }) {
