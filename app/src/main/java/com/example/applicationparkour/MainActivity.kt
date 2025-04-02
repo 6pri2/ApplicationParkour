@@ -54,6 +54,8 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import okhttp3.internal.wait
 
 
 // --- Configuration Retrofit ---
@@ -132,7 +134,10 @@ data class ObstacleResultAPI(
 
 data class PerformanceResponse(
     val id: Int,
-    val performance: Performance? // Rend le champ nullable
+    val competitor_id: Int,
+    val course_id: Int,
+    val status: String,
+    val total_time: Int,
 )
 
 // Interface de l'API
@@ -1213,8 +1218,7 @@ fun CompetiteurArbitrageItem(
 
             // 3. Filtrage sécurisé avec vérification null
             val matching = allPerformances.filter { response ->
-                response.performance?.let { perf ->
-                    perf.competition_id == compId &&
+                response?.let { perf ->
                             perf.course_id == crsId &&
                             perf.competitor_id == competitorId
                 } ?: false
@@ -1336,6 +1340,8 @@ fun ChronometreScreen(
                     currentObstacleIndex < obstacles.size -> "to_finish"
                     else -> "to_verify" // Tous les obstacles terminés
                 }
+                println(competitorId.toInt())
+                println(courseId.toInt())
                 val insert = PerformanceAPI(
                     competitorId.toInt(),
                     courseId.toInt(),
@@ -1356,9 +1362,13 @@ fun ChronometreScreen(
                         else -> "to_verify" // Valeur par défaut
                     }
 
+                    runBlocking { launch { delay(1000) } }
 
-                    val p = ApiClient.apiService.getPerformances(token).filter { it.performance?.competitor_id == competitorId.toInt()
-                            && it.performance.course_id == courseId.toInt()  }
+                    var p = ApiClient.apiService.getPerformances(token)
+                    println(p.size)
+                    p = p.filter { it.competitor_id == competitorId.toInt()
+                            && it.course_id == courseId.toInt()  }
+                    println(p.size)
                     val pi = p.get(0)
 
                     ApiClient.apiService.saveObstacleResult(token,
