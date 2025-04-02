@@ -95,23 +95,38 @@ app/
 
 ```mermaid
 graph TD
-    A[Accueil] --> B[[Competition]]
-    A --> C[[Competiteur]]
-    A --> D[[Obstacles]]
+    A[Accueil] --> B[Competition]
+    A --> C[Competiteur]
+    A --> D[Obstacles]
     
     B --> E[Liste Compétitions]
-    C --> E
-    D --> F[Liste Participants]
+    C --> F[Liste Participants]
+    D --> G[Modifier Obstacle]
+    D --> H[Supprimer Obstacle]
     
-    E --> G[Détails Compétition]
-    G --> H[Parcours]
-    G --> I[Concurrents]
-    G --> J[Arbitrage]
+    %% Actions Compétitions
+    E --> E1[Modifier Compétition]
+    E --> E2[Supprimer Compétition]
+    E --> I[Classement]
+    E --> J[Gestion Concurrents]
     
-    J --> K[Chronomètre Obstacle]
-    J --> L[Classement]
+    %% Actions Concurrents
+    J --> J1[Modifier Concurrent]
+    J --> J2[Supprimer Concurrent]
     
-    F --> M[Ajouter Participant]
-    F --> N[Modifier Participant]
-    F --> O[Supprimer Participant]
+    %% Actions Arbitrage
+    E --> L[Arbitrage]
+    L --> L1[Chronomètre Obstacle]
+    L --> L2[Noter]
+    
+    %% Actions Participants
+    F --> O[Ajouter Participant]
+    F --> P[Modifier Participant]
+    F --> Q[Supprimer Participant]
+    
+    %% Actions Obstacles
+    D --> G
+    D --> H
+    
+
     
