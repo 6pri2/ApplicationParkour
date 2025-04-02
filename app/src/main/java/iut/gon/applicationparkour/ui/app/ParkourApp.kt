@@ -11,6 +11,7 @@ import iut.gon.applicationparkour.ui.screens.CompetitionCompetitorsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionCoursesScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionResultsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitionScreen
+import iut.gon.applicationparkour.ui.screens.CompetitorDetailsScreen
 import iut.gon.applicationparkour.ui.screens.CompetitorScreen
 import iut.gon.applicationparkour.ui.screens.CourseObstaclesScreen
 import iut.gon.applicationparkour.ui.screens.ObstaclesScreen
@@ -88,6 +89,19 @@ fun ParkourApp() {
                 competitionId = competitionId,
                 courseId = courseId,
                 competitorId = competitorId
+            )
+        }
+
+        composable(
+            "competitorDetails/{competitionId}/{courseId}/{competitorId}/{rank}/{performanceId}"
+        ) { backStackEntry ->
+            CompetitorDetailsScreen(
+                navController = navController,
+                performanceId = backStackEntry.arguments?.getString("performanceId") ?: "",
+                competitionId = backStackEntry.arguments?.getString("competitionId") ?: "",
+                courseId = backStackEntry.arguments?.getString("courseId") ?: "",
+                competitorId = backStackEntry.arguments?.getString("competitorId") ?: "",
+                rank = backStackEntry.arguments?.getString("rank") ?: ""
             )
         }
     }
