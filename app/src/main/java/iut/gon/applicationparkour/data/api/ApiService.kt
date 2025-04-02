@@ -193,7 +193,7 @@ interface ApiService {
         @Header("Authorization") token: String = TOKEN
     ): PerformanceResponse
 
-    @POST("results")
+    @POST("performance_obstacles")
     suspend fun saveObstacleResult(
         @Body result: ObstacleResultAPI,
         @Header("Authorization") token: String = TOKEN

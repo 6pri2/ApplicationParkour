@@ -9,5 +9,7 @@ import com.google.gson.annotations.SerializedName
 data class UpdateObstaclePositionRequest(
     @SerializedName("obstacle_id")
     val obstacleId: Int,
+    @SerializedName("position")
+    val position: Int
 
 )

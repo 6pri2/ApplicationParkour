@@ -131,7 +131,7 @@ fun ChronometreScreen(
                     println(p.size)
                     val pi = p.get(0)
 
-                    ApiClient.apiService.saveObstacleResult(
+                    println(ApiClient.apiService.saveObstacleResult(
                         ObstacleResultAPI(
                             obstacle_id = it.obstacle_id,
                             performance_id = pi.id,
@@ -139,7 +139,7 @@ fun ChronometreScreen(
                             to_verify = false,
                             time = it.time,
                         )
-                    )
+                    ))
                 }
 
 
