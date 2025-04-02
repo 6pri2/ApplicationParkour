@@ -44,6 +44,7 @@ import iut.gon.applicationparkour.data.api.ApiClient
 import iut.gon.applicationparkour.data.model.Competition
 import iut.gon.applicationparkour.data.model.Competitor
 import iut.gon.applicationparkour.data.model.Courses
+import iut.gon.applicationparkour.data.model.Obstacles
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
@@ -333,11 +334,13 @@ fun CompetitorDetailsScreen(
                 }
 
 
-
                 competition = deferredCompetition.await()
                 course = deferredCourse.await()
                 competitor = deferredCompetitor.await()
                 obstacles = deferredObstacles.await()
+
+
+
                 loading = false
                 println(obstacles.size)
             } catch (e: Exception) {
@@ -420,6 +423,19 @@ fun CompetitorDetailsScreen(
 
 @Composable
 fun ObstacleCard(obstacle: PerformanceObstacle) {
+    var name by remember { mutableStateOf<String?>(null) }
+    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    LaunchedEffect(obstacle.obstacle_id) {
+        try {
+            val obstacleDetails = ApiClient.apiService.getObstacleDetails(token, obstacle.obstacle_id)
+            name = obstacleDetails.name
+        } catch (e: Exception) {
+            name = "Obstacle inconnu"
+        }
+    }
+
+
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -429,7 +445,7 @@ fun ObstacleCard(obstacle: PerformanceObstacle) {
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Obstacle #${obstacle.obstacle_id}",
+                text = name ?: "Chargement...",
                 style = MaterialTheme.typography.titleMedium
             )
             Text(text = "Temps: ${obstacle.time} secondes")
