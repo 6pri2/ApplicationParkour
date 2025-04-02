@@ -54,7 +54,7 @@ fun CourseItemModif(
             )
             Spacer(modifier = Modifier.Companion.height(8.dp))
             Text(text = "Durée max: ${course.max_duration} secondes")
-            Text(text = "Position: ${course.position}")
+
             Text(text = "Statut: ${if (course.is_over == 1) "Terminé" else "En cours"}")
 
             Row(

@@ -90,7 +90,7 @@ fun CourseObstaclesScreen(
                 try {
                     val request = UpdateObstaclePositionRequest(
                         obstacleId = obstacle.obstacle_id,
-                        position = currentIndex  // Essayez avec et sans +1
+
                     )
                     println("DEBUG - Sending request: $request")
                     // Envoyer la nouvelle position (currentIndex car les indices commencent à 0)
@@ -126,7 +126,7 @@ fun CourseObstaclesScreen(
                         courseId,
                         UpdateObstaclePositionRequest(
                             obstacleId = obstacle.obstacle_id,
-                            position = currentIndex + 1
+
                         )
                     )
 
