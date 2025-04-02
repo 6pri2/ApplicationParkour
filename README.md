@@ -21,7 +21,7 @@ Application Android pour l'arbitrage des compétitions de parkour - Projet R4.11
 
 - **Synchronisation** :
   - Stockage local pour un arbitrage sans latence
- 
+
 ```bash
 app/
 │
@@ -32,49 +32,43 @@ app/
 │   └── iut.gon.applicationparkour/
 │       │
 │       ├── data/
-│       │   └── api/
-│       │       ├── ApiClient.kt
-│       │       ├── ApiService.kt
+│       │   ├── api/
+│       │   │   ├── ApiClient.kt
+│       │   │   └── ApiService.kt
+│       │   └── model/
 │       │       ├── AddCompetitorRequest.kt
 │       │       ├── AddObstacleRequest.kt
+│       │       ├── Competition.kt
+│       │       ├── Competitor.kt
+│       │       ├── Courses.kt
 │       │       ├── CourseUpdateRequest.kt
 │       │       ├── CreateCourseRequest.kt
+│       │       ├── ObstacleCourse.kt
+│       │       ├── Obstacles.kt
 │       │       └── UpdateObstaclePositionRequest.kt
 │       │
-│       ├── model/
-│       │   ├── Competition.kt
-│       │   ├── Competitor.kt
-│       │   ├── Courses.kt
-│       │   ├── ObstacleCourse.kt
-│       │   └── Obstacles.kt
-│       │
 │       ├── ui/
+│       │   ├── app/
+│       │   │   └── ParkourApp.kt
 │       │   ├── components/
 │       │   │   ├── competition/
 │       │   │   │   ├── CompetitionEditDialog.kt
 │       │   │   │   ├── CompetitionItem.kt
-│       │   │   │   ├── calculateAge.kt
 │       │   │   │   └── DeleteCompetitionDialog.kt
-│       │   │   │
 │       │   │   ├── competitor/
 │       │   │   │   ├── AddCompetitorDialog.kt
-│       │   │   │   ├── CourseEditDialog.kt
-│       │   │   │   ├── CourseItem.kt
+│       │   │   │   ├── calculateAge.kt
 │       │   │   │   └── CompetitorCard.kt
-│       │   │   │
 │       │   │   ├── courses/
 │       │   │   │   ├── CourseAddDialog.kt
 │       │   │   │   ├── CourseEditDialog.kt
 │       │   │   │   ├── CourseItem.kt
 │       │   │   │   └── CourseItemModif.kt
-│       │   │   │
 │       │   │   ├── obstacle/
 │       │   │   │   ├── AddObstacleDialog.kt
 │       │   │   │   └── ObstacleItem.kt
-│       │   │   │
 │       │   │   └── scaffold/
 │       │   │       └── ScreenScaffold.kt
-│       │   │
 │       │   └── screens/
 │       │       ├── ArbitrageScreen.kt
 │       │       ├── CompetitionArbitrageScreen.kt
@@ -82,14 +76,11 @@ app/
 │       │       ├── CompetitionCoursesScreen.kt
 │       │       ├── CompetitionResultsScreen.kt
 │       │       ├── CompetitionScreen.kt
+│       │       ├── CompetitorScreen.kt
 │       │       ├── CourseObstaclesScreen.kt
 │       │       ├── ObstaclesScreen.kt
 │       │       ├── ResultScreen.kt
 │       │       └── WelcomeScreen.kt
-│       │
-│       ├── navigation/
-│       │   ├── NavGraph.kt
-│       │   └── Routes.kt
 │       │
 │       └── theme/
 │           ├── Color.kt
@@ -98,18 +89,29 @@ app/
 │
 └── MainActivity.kt
 
+```
 
 ## 📱 Navigation principale
 
 ```mermaid
 graph TD
-    A[Accueil] --> B[[Créer Compétition]]
-    A --> C[[Arbitrer Compétition]]
-    B --> D[Liste Compétitions]
-    C --> D
-    D --> E[Détails Compétition]
-    E --> F[Parcours]
-    E --> G[Concurrents]
-    E --> H[Arbitrage]
-    H --> I[Chronomètre Obstacle]
-    H --> J[Classement]
+    A[Accueil] --> B[[Competition]]
+    A --> C[[Competiteur]]
+    A --> D[[Obstacles]]
+    
+    B --> E[Liste Compétitions]
+    C --> E
+    D --> F[Liste Participants]
+    
+    E --> G[Détails Compétition]
+    G --> H[Parcours]
+    G --> I[Concurrents]
+    G --> J[Arbitrage]
+    
+    J --> K[Chronomètre Obstacle]
+    J --> L[Classement]
+    
+    F --> M[Ajouter Participant]
+    F --> N[Modifier Participant]
+    F --> O[Supprimer Participant]
+    
