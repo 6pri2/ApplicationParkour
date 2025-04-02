@@ -95,9 +95,9 @@ app/
 
 ```mermaid
 graph TD
-    A[Accueil] --> B[[Créer Compétition]]
-    A --> C[[Arbitrer Compétition]]
-    A --> D[[Gérer Participants]]
+    A[Accueil] --> B[[Competition]]
+    A --> C[[Competiteur]]
+    A --> D[[Obstacles]]
     
     B --> E[Liste Compétitions]
     C --> E
