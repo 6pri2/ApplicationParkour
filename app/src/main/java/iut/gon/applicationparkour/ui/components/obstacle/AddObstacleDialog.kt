@@ -23,7 +23,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AddObstacleDialog(
-    token: String,
     obstacle: Obstacles? = null,
     onDismiss: () -> Unit,
     onObstaclesUpdated: () -> Unit
@@ -74,10 +73,9 @@ fun AddObstacleDialog(
                         scope.launch {
                             try {
                                 if (obstacle == null) {
-                                    ApiClient.apiService.addObstacles(token, updatedObstacle)
+                                    ApiClient.apiService.addObstacles( updatedObstacle)
                                 } else {
                                     ApiClient.apiService.updateObstacles(
-                                        token,
                                         updatedObstacle.id,
                                         updatedObstacle
                                     )

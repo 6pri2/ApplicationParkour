@@ -66,8 +66,8 @@ fun CourseObstaclesScreen(
         scope.launch {
             isLoading = true
             try {
-                val updatedObstacles = ApiClient.apiService.getCourseObstacles(token, courseId)
-                val updatedUnused = ApiClient.apiService.getUnusedObstacles(token, courseId)
+                val updatedObstacles = ApiClient.apiService.getCourseObstacles(courseId)
+                val updatedUnused = ApiClient.apiService.getUnusedObstacles(courseId)
                 courseObstacles = updatedObstacles.sortedBy { it.position }
                 unusedObstacles = updatedUnused
             } catch (e: Exception) {
@@ -95,7 +95,6 @@ fun CourseObstaclesScreen(
                     println("DEBUG - Sending request: $request")
                     // Envoyer la nouvelle position (currentIndex car les indices commencent à 0)
                     val response = ApiClient.apiService.updateObstaclePosition(
-                        token,
                         courseId,
                         request
                     )
@@ -122,7 +121,6 @@ fun CourseObstaclesScreen(
                 try {
                     // Envoyer la nouvelle position (currentIndex + 2 si l'API attend des positions à partir de 1)
                     val response = ApiClient.apiService.updateObstaclePosition(
-                        token,
                         courseId,
                         UpdateObstaclePositionRequest(
                             obstacleId = obstacle.obstacle_id,
@@ -165,12 +163,10 @@ fun CourseObstaclesScreen(
                                 try {
                                     // Créer le nouvel obstacle
                                     val newObstacle = ApiClient.apiService.addObstacles(
-                                        token,
                                         Obstacles(id = 0, name = obstacleName)
                                     )
                                     // Ajouter l'obstacle au parcours
                                     ApiClient.apiService.addObstacleToCourse(
-                                        token,
                                         courseId,
                                         AddObstacleRequest(newObstacle.id)
                                     )
@@ -216,7 +212,6 @@ fun CourseObstaclesScreen(
                                 scope.launch {
                                     try {
                                         ApiClient.apiService.removeObstacleFromCourse(
-                                            token,
                                             courseId,
                                             obstacle.obstacle_id
                                         )
@@ -248,7 +243,6 @@ fun CourseObstaclesScreen(
                                 scope.launch {
                                     try {
                                         ApiClient.apiService.addObstacleToCourse(
-                                            token,
                                             courseId,
                                             AddObstacleRequest(obstacle.id)
                                         )

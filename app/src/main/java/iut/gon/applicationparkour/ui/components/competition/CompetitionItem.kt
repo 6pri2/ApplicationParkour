@@ -27,7 +27,6 @@ fun CompetitionItem(
     onCompetitors: () -> Unit,
     onResults: () -> Unit,
     onArbitrage: () -> Unit,
-    onCourses: () -> Unit
 ) {
     Card(
         modifier = Modifier

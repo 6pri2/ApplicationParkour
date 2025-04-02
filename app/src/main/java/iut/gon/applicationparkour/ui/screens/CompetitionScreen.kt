@@ -49,7 +49,6 @@ fun CompetitionScreen(navController: NavController) {
         title = "Compétitions",
         navController = navController
     ) {
-        val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
         var competitions by remember { mutableStateOf<List<Competition>?>(null) }
         var showEditDialog by remember { mutableStateOf(false) }
         var showDeleteDialog by remember { mutableStateOf(false) }
@@ -66,7 +65,7 @@ fun CompetitionScreen(navController: NavController) {
             scope.launch {
                 isLoading = true
                 try {
-                    competitions = ApiClient.apiService.getCompetitions(token)
+                    competitions = ApiClient.apiService.getCompetitions()
                     isLoading = false
                 } catch (e: Exception) {
                     isLoading = false
@@ -80,7 +79,7 @@ fun CompetitionScreen(navController: NavController) {
                 isLoading = true
                 try {
                     val createdCompetition =
-                        ApiClient.apiService.addCompetition(token, baseCompetition)
+                        ApiClient.apiService.addCompetition( baseCompetition)
                     showSuccessMessage = "Compétition créée"
                     navController.navigate("competitionCourses/${createdCompetition.id}") {
                         popUpTo("competitions") { inclusive = false }
@@ -122,7 +121,6 @@ fun CompetitionScreen(navController: NavController) {
                         isLoading = true
                         try {
                             ApiClient.apiService.updateCompetition(
-                                token,
                                 selectedCompetition!!.id,
                                 updatedCompetition
                             )
@@ -160,7 +158,7 @@ fun CompetitionScreen(navController: NavController) {
                     scope.launch {
                         isLoading = true
                         try {
-                            ApiClient.apiService.deleteCompetition(token, selectedCompetition!!.id)
+                            ApiClient.apiService.deleteCompetition( selectedCompetition!!.id)
                             showSuccessMessage = "Compétition supprimée"
                             loadCompetitions()
                         } catch (e: Exception) {
@@ -229,9 +227,6 @@ fun CompetitionScreen(navController: NavController) {
                                     },
                                     onArbitrage = {
                                         navController.navigate("arbitrage/${competition.id}")
-                                    },
-                                    onCourses = {
-                                        navController.navigate("competitionCourses/${competition.id}")
                                     }
                                 )
                             }

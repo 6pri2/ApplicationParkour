@@ -24,164 +24,188 @@ import retrofit2.http.Path
  */
 
 interface ApiService {
+
+    companion object {
+        const val TOKEN = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
+    }
+
     @GET("competitions")
-    suspend fun getCompetitions(@Header("Authorization") token: String): List<Competition>
+    suspend fun getCompetitions(@Header("Authorization") token: String = TOKEN): List<Competition>
 
     @GET("competitors")
-    suspend fun getCompetitors(@Header("Authorization") token: String): List<Competitor>
+    suspend fun getCompetitors(@Header("Authorization") token: String = TOKEN): List<Competitor>
 
     @GET("courses")
-    suspend fun getCourses(@Header("Authorization") token: String): List<Courses>
+    suspend fun getCourses(@Header("Authorization") token: String = TOKEN): List<Courses>
 
     @GET("obstacles")
-    suspend fun getObstacles(@Header("Authorization") token: String): List<Obstacles>
+    suspend fun getObstacles(@Header("Authorization") token: String = TOKEN): List<Obstacles>
 
     @GET("courses/{id}/obstacles")
     suspend fun getCourseObstacles(
-        @Header("Authorization") token: String,
-        @Path("id") courseId: Int
+        @Path("id") courseId: Int,
+        @Header("Authorization") token: String = TOKEN
+
     ): List<ObstacleCourse>
 
     @GET("courses/{id}/unused_obstacles")
     suspend fun getUnusedObstacles(
-        @Header("Authorization") token: String,
-        @Path("id") courseId: Int
+        @Path("id") courseId: Int,
+        @Header("Authorization") token:  String = TOKEN
+
     ): List<Obstacles>
 
     @GET("competitions/{id}/inscriptions")
     suspend fun getCompetitorsByCompetition(
-        @Header("Authorization") token: String,
-        @Path("id") competitionId: Int
+        @Path("id") competitionId: Int,
+        @Header("Authorization") token:  String = TOKEN
+
     ): List<Competitor>
 
     @GET("competitions/{id}")
     suspend fun getCompetitionDetails(
-        @Header("Authorization") token: String,
-        @Path("id") competitionId: Int
+        @Path("id") competitionId: Int,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Competition
 
     @GET("competitors")
     suspend fun getAllCompetitors(
-        @Header("Authorization") token: String
+        @Header("Authorization") token:  String = TOKEN
     ): List<Competitor>
 
     @GET("competitions/{id}/courses")
     suspend fun getCompetitionCourses(
-        @Header("Authorization") token: String,
-        @Path("id") competitionId: Int
+        @Path("id") competitionId: Int,
+        @Header("Authorization") token:  String = TOKEN
+
     ): List<Courses>
 
     @POST("obstacles")
     suspend fun addObstacles(
-        @Header("Authorization") token: String,
-        @Body obstacles: Obstacles
+        @Body obstacles: Obstacles,
+        @Header("Authorization") token:  String = TOKEN,
+
     ): Obstacles
 
     @POST("competitors")
     suspend fun addCompetitor(
-        @Header("Authorization") token: String,
-        @Body competitor: Competitor
+        @Body competitor: Competitor,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Competitor
 
     @POST("competitions")
     suspend fun addCompetition(
-        @Header("Authorization") token: String,
-        @Body competition: Competition
+        @Body competition: Competition,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Competition
 
 
 
     @POST("competitions/{id}/add_competitor")
     suspend fun addCompetitorToCompetition(
-        @Header("Authorization") token: String,
         @Path("id") competitionId: Int,
-        @Body competitorId: AddCompetitorRequest
+        @Body competitorId: AddCompetitorRequest,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Response<Unit>
 
     @POST("courses")
     suspend fun addCourse(
-        @Header("Authorization") token: String,
-        @Body course: CreateCourseRequest
+        @Body course: CreateCourseRequest,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Courses
 
     @POST("courses/{courseId}/add_obstacle")
     suspend fun addObstacleToCourse(
-        @Header("Authorization") token: String,
         @Path("courseId") courseId: Int,
-        @Body request: AddObstacleRequest
+        @Body request: AddObstacleRequest,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Response<Unit>
 
     @POST("courses/{courseId}/update_obstacle_position")
     suspend fun updateObstaclePosition(
-        @Header("Authorization") token: String,
         @Path("courseId") courseId: Int,
-        @Body request: UpdateObstaclePositionRequest
+        @Body request: UpdateObstaclePositionRequest,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Response<Unit>
 
     @DELETE("competitors/{id}")
     suspend fun deleteCompetitor(
-        @Header("Authorization") token: String,
-        @Path("id") competitorId: Int
+        @Path("id") competitorId: Int,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Response<Unit>
 
     @DELETE("obstacles/{id}")
     suspend fun deleteObstacles(
-        @Header("Authorization") token: String,
-        @Path("id") obstaclesId: Int
+        @Path("id") obstaclesId: Int,
+        @Header("Authorization") token:  String = TOKEN
     ): Response<Unit>
 
     @DELETE("competitions/{id}")
     suspend fun deleteCompetition(
-        @Header("Authorization") token: String,
-        @Path("id") competitionId: Int
+        @Path("id") competitionId: Int,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Response<Unit>
 
     @DELETE("competitions/{id}/remove_competitor/{id_competitor}")
     suspend fun removeCompetitorFromCompetition(
-        @Header("Authorization") token: String,
         @Path("id") competitionId: Int,
-        @Path("id_competitor") competitorId: Int
+        @Path("id_competitor") competitorId: Int,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Response<Unit>
 
     @DELETE("courses/{id}")
     suspend fun deleteCourse(
-        @Header("Authorization") token: String,
-        @Path("id") courseId: Int
+        @Path("id") courseId: Int,
+        @Header("Authorization") token:  String = TOKEN
+
     ): Response<Unit>
 
     @DELETE("courses/{courseId}/remove_obstacle/{obstacleId}")
     suspend fun removeObstacleFromCourse(
-        @Header("Authorization") token: String,
         @Path("courseId") courseId: Int,
-        @Path("obstacleId") obstacleId: Int
+        @Path("obstacleId") obstacleId: Int,
+        @Header("Authorization") token: String = TOKEN
+
     ): Response<Unit>
 
     @PUT("competitors/{id}")
     suspend fun updateCompetitor(
-        @Header("Authorization") token: String,
         @Path("id") competitorId: Int,
-        @Body competitor: Competitor
+        @Body competitor: Competitor,
+        @Header("Authorization") token: String = TOKEN
     ): Competitor
 
     @PUT("obstacles/{id}")
     suspend fun updateObstacles(
-        @Header("Authorization") token: String,
         @Path("id") obstaclesId: Int,
-        @Body obstacles: Obstacles
+        @Body obstacles: Obstacles,
+        @Header("Authorization") token: String = TOKEN
     ): Obstacles
 
     @PUT("competitions/{id}")
     suspend fun updateCompetition(
-        @Header("Authorization") token: String,
         @Path("id") competitionId: Int,
-        @Body competition: Competition
+        @Body competition: Competition,
+        @Header("Authorization") token: String = TOKEN
+
     ): Competition
 
     @PUT("courses/{id}")
     suspend fun updateCourse(
-        @Header("Authorization") token: String,
         @Path("id") courseId: Int,
-        @Body course: CourseUpdateRequest
+        @Body course: CourseUpdateRequest,
+        @Header("Authorization") token: String = TOKEN
+
     ): Courses
 
 }

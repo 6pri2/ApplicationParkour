@@ -31,7 +31,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ObstaclesScreen(navController: NavController) {
-    val token = "Bearer 1ofD5tbAoC0Xd0TCMcQG3U214MqUo7JzUWrQFWt1ugPuiiDmwQCImm9Giw7fwR0Y"
     var obstacles by remember { mutableStateOf<List<Obstacles>?>(null) }
     var filteredObstacles by remember { mutableStateOf<List<Obstacles>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
@@ -55,7 +54,7 @@ fun ObstaclesScreen(navController: NavController) {
     val updateObstacles = {
         scope.launch {
             try {
-                obstacles = ApiClient.apiService.getObstacles(token)
+                obstacles = ApiClient.apiService.getObstacles()
                 filterObstacles(searchQuery)
             } catch (e: Exception) {
                 println("Erreur lors du chargement des obstacles : ${e.message}")
@@ -73,7 +72,6 @@ fun ObstaclesScreen(navController: NavController) {
 
     if (showDialog) {
         AddObstacleDialog(
-            token = token,
             obstacle = obstacleToEdit,
             onDismiss = { showDialog = false },
             onObstaclesUpdated = {
@@ -95,7 +93,7 @@ fun ObstaclesScreen(navController: NavController) {
                     onClick = {
                         scope.launch {
                             try {
-                                ApiClient.apiService.deleteObstacles(token, obstacleToDelete!!.id)
+                                ApiClient.apiService.deleteObstacles( obstacleToDelete!!.id)
                                 updateObstacles()
                                 showDeleteDialog = false
                             } catch (e: Exception) {
