@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -330,19 +331,14 @@ fun CompetitorDetailsScreen(
                         .firstOrNull { it.id == competitorId.toInt() }
                 }
                 val deferredObstacles = async {
-                    ApiClient.apiService.getPerformanceObstacles(token,performanceId.toInt())
+                    ApiClient.apiService.getPerformanceObstacles(token, performanceId.toInt())
                 }
-
 
                 competition = deferredCompetition.await()
                 course = deferredCourse.await()
                 competitor = deferredCompetitor.await()
                 obstacles = deferredObstacles.await()
-
-
-
                 loading = false
-                println(obstacles.size)
             } catch (e: Exception) {
                 error = "Erreur de chargement: ${e.message}"
                 loading = false
@@ -355,64 +351,39 @@ fun CompetitorDetailsScreen(
         navController = navController
     ) {
         if (loading) {
-            CircularProgressIndicator()
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else if (error != null) {
-            Text(
-                text = error!!,
-                color = MaterialTheme.colorScheme.error)
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = error!!, color = MaterialTheme.colorScheme.error)
+            }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                // Section informations principales
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Compétition: ${competition?.name ?: "Non disponible"}",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Text(
-                        text = "Parcours: ${course?.name ?: "Non disponible"}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "Participant: ${competitor?.let { "${it.first_name} ${it.last_name}" } ?: "Non disponible"}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "Classement: $rank",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "ID Performance: $performanceId",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+            Column(modifier = Modifier.fillMaxSize().fillMaxWidth().padding(16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth(),  colors = CardDefaults.cardColors(containerColor = Color(0x808080)), elevation = CardDefaults.cardElevation(4.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Compétition: ${competition?.name ?: "Non disponible"}", style = MaterialTheme.typography.titleLarge)
+                        Text(text = "Parcours: ${course?.name ?: "Non disponible"}", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "Participant: ${competitor?.let { "${it.first_name} ${it.last_name}" } ?: "Non disponible"}", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "Classement: $rank", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "ID Performance: $performanceId", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
 
-                // Section obstacles
-                Text(
-                    text = "Obstacles",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = "Obstacles", style = MaterialTheme.typography.titleLarge)
+                Divider()
 
                 if (obstacles.isEmpty()) {
-                    Text(
-                        text = "Aucun obstacle trouvé",
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "Aucun obstacle trouvé")
+                    }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(obstacles) { obstacle ->
-                            ObstacleCard(obstacle = obstacle)
+                            Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
+                                ObstacleCard(obstacle = obstacle)
+                            }
                         }
                     }
                 }
@@ -420,6 +391,7 @@ fun CompetitorDetailsScreen(
         }
     }
 }
+
 
 @Composable
 fun ObstacleCard(obstacle: PerformanceObstacle) {
