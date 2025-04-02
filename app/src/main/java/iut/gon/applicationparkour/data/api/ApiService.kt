@@ -10,8 +10,8 @@ import iut.gon.applicationparkour.data.model.CreateCourseRequest
 import iut.gon.applicationparkour.data.model.ObstacleCourse
 import iut.gon.applicationparkour.data.model.Obstacles
 import iut.gon.applicationparkour.data.model.UpdateObstaclePositionRequest
-import iut.gon.applicationparkour.ui.screens.Performance
-import iut.gon.applicationparkour.ui.screens.PerformanceObstacle
+import iut.gon.applicationparkour.data.model.Performance
+import iut.gon.applicationparkour.data.model.PerformanceObstacle
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
