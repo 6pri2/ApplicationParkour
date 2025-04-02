@@ -104,25 +104,29 @@ graph TD
     D --> G[Modifier Obstacle]
     D --> H[Supprimer Obstacle]
     
-
+    %% Actions Compétitions
     E --> E1[Modifier Compétition]
     E --> E2[Supprimer Compétition]
-
-    E--> J[Comepetiteur]
-
-    E--> I1[Classement]
+    E --> I[Classement]
+    E --> J[Gestion Concurrents]
+    
+    %% Actions Concurrents
+    J --> J1[Modifier Concurrent]
+    J --> J2[Supprimer Concurrent]
+    
+    %% Actions Arbitrage
     E --> L[Arbitrage]
-    
-    
-    
-    
-    
     L --> L1[Chronomètre Obstacle]
     L --> L2[Noter]
     
-    F --> O[Ajouter]
-    F --> P[Modifier]
-    F --> Q[Supprimer]
+    %% Actions Participants
+    F --> O[Ajouter Participant]
+    F --> P[Modifier Participant]
+    F --> Q[Supprimer Participant]
+    
+    %% Actions Obstacles
+    D --> G
+    D --> H
     
 
     
