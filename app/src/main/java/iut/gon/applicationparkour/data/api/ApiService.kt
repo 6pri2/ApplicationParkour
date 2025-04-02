@@ -8,8 +8,11 @@ import iut.gon.applicationparkour.data.model.CourseUpdateRequest
 import iut.gon.applicationparkour.data.model.Courses
 import iut.gon.applicationparkour.data.model.CreateCourseRequest
 import iut.gon.applicationparkour.data.model.ObstacleCourse
+import iut.gon.applicationparkour.data.model.ObstacleResultAPI
 import iut.gon.applicationparkour.data.model.Obstacles
+import iut.gon.applicationparkour.data.model.PerformanceAPI
 import iut.gon.applicationparkour.data.model.UpdateObstaclePositionRequest
+import iut.gon.applicationparkour.ui.components.performance.PerformanceResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -45,8 +48,13 @@ interface ApiService {
     suspend fun getCourseObstacles(
         @Path("id") courseId: Int,
         @Header("Authorization") token: String = TOKEN
-
     ): List<ObstacleCourse>
+
+    @GET("courses/{courseId}/obstacles")
+    suspend fun getCourseObstaclesv2(
+        @Path("courseId") courseId: Int,
+        @Header("Authorization") token: String = TOKEN
+    ): List<Obstacles>
 
     @GET("courses/{id}/unused_obstacles")
     suspend fun getUnusedObstacles(
@@ -80,6 +88,33 @@ interface ApiService {
         @Header("Authorization") token:  String = TOKEN
 
     ): List<Courses>
+
+    @GET("courses/{courseId}/performances")
+    suspend fun getPerformanceByCourse(
+        @Path("courseId") courseId: Int,
+        @Header("Authorization") token: String = TOKEN
+    ): List<PerformanceResponse>
+
+    @GET("competitions/{competitionId}/inscriptions")
+    suspend fun getCompetitionInscriptions(
+        @Path("competitionId") competitionId: Int,
+        @Header("Authorization") token: String = TOKEN
+    ): List<Competitor>
+
+    @GET("performances")
+    suspend fun getPerformances(@Header("Authorization") token: String = TOKEN): List<PerformanceResponse>
+
+    @GET("courses/{id}")
+    suspend fun getCourseById(
+        @Path("id") courseId: Int,
+        @Header("Authorization") token: String = TOKEN
+    ): Courses
+
+    @GET("competitions/{id}")
+    suspend fun getCompetitionById(
+        @Path("id") competitionId: Int,
+    @Header("Authorization") token: String = TOKEN
+    ): Competition
 
     @POST("obstacles")
     suspend fun addObstacles(
@@ -133,6 +168,18 @@ interface ApiService {
         @Body request: UpdateObstaclePositionRequest,
         @Header("Authorization") token:  String = TOKEN
 
+    ): Response<Unit>
+
+    @POST("performances")
+    suspend fun createPerformance(
+        @Body performance: PerformanceAPI,
+        @Header("Authorization") token: String = TOKEN
+    ): PerformanceResponse
+
+    @POST("results")
+    suspend fun saveObstacleResult(
+        @Body result: ObstacleResultAPI,
+        @Header("Authorization") token: String = TOKEN
     ): Response<Unit>
 
     @DELETE("competitors/{id}")

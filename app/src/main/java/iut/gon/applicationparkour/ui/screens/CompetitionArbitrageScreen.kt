@@ -19,9 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import iut.gon.applicationparkour.ui.components.courses.CourseItem
 import iut.gon.applicationparkour.data.api.ApiClient
 import iut.gon.applicationparkour.data.model.Courses
+import iut.gon.applicationparkour.ui.components.courses.CourseItemArbitrage
 import iut.gon.applicationparkour.ui.components.scaffold.ScreenScaffold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -86,7 +86,6 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
                             CircularProgressIndicator()
                         }
                     }
-
                     error != null -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -94,25 +93,22 @@ fun CompetitionArbitrageScreen(navController: NavController, competitionId: Stri
                         ) {
                             Text(
                                 text = error!!,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
                     }
-
                     courses.isEmpty() -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Aucun parcours trouvé pour cette compétition", style = MaterialTheme.typography.bodyMedium)
+                            Text("Aucun parcours trouvé pour cette compétition")
                         }
                     }
-
                     else -> {
                         LazyColumn(modifier = Modifier.weight(1f)) {
                             items(courses) { course ->
-                                CourseItem(
+                                CourseItemArbitrage(
                                     course = course,
                                     competitionId = competitionId,
                                     navController = navController
