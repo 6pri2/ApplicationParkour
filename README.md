@@ -111,7 +111,7 @@ graph TD
     E --> E1[Modifier Compétition]
     E --> E2[Supprimer Compétition]
     
-    I --> I1[Classement]
+    E--> I1[Classement]
     
     L --> L1[Chronomètre Obstacle]
     L --> L2[Noter]
