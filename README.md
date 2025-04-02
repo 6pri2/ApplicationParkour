@@ -53,11 +53,13 @@ app/
 │       │   │   ├── competition/
 │       │   │   │   ├── CompetitionEditDialog.kt
 │       │   │   │   ├── CompetitionItem.kt
+│       │   │   │   ├── calculateAge.kt
 │       │   │   │   └── DeleteCompetitionDialog.kt
 │       │   │   │
 │       │   │   ├── competitor/
 │       │   │   │   ├── AddCompetitorDialog.kt
-│       │   │   │   ├── calculateAge.kt
+│       │   │   │   ├── CourseEditDialog.kt
+│       │   │   │   ├── CourseItem.kt
 │       │   │   │   └── CompetitorCard.kt
 │       │   │   │
 │       │   │   ├── courses/
@@ -80,7 +82,6 @@ app/
 │       │       ├── CompetitionCoursesScreen.kt
 │       │       ├── CompetitionResultsScreen.kt
 │       │       ├── CompetitionScreen.kt
-│       │       ├── CompetitorScreen.kt
 │       │       ├── CourseObstaclesScreen.kt
 │       │       ├── ObstaclesScreen.kt
 │       │       ├── ResultScreen.kt
