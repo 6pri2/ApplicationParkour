@@ -106,8 +106,6 @@ graph TD
     
     
     E--> J[Parcours]
-    E --> K[Modifier]
-    E --> M[Supprimer]
     E --> L[Arbitrage]
     
     E --> E1[Modifier Compétition]
