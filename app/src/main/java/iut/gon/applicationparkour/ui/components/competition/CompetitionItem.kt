@@ -56,7 +56,6 @@ fun CompetitionItem(
                     Text(text = "Âge: ${competition.age_min} - ${competition.age_max} ans", style = MaterialTheme.typography.bodyMedium)
                     Text(text = "Genre: ${if (competition.gender == "H") "Homme" else "Femme"}", style = MaterialTheme.typography.bodyMedium)
                     Text(text = "Retry: ${if (competition.has_retry == 1) "Oui" else "Non"}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Statut: ${if (competition.status == "not_ready") "Pas prêt" else "Prêt"}", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
