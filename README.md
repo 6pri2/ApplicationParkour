@@ -94,7 +94,7 @@ app/
 ## 📱 Navigation principale
 
 ```mermaid
-A[Accueil] --> B[[Competition]]
+    A[Accueil] --> B[[Competition]]
     A --> C[[Competiteur]]
     A --> D[[Obstacles]]
     
