@@ -104,14 +104,18 @@ graph TD
     D --> G[Modifier Obstacle]
     D --> H[Supprimer Obstacle]
     
-    
-    E--> J[Parcours]
-    E --> L[Arbitrage]
-    
+
     E --> E1[Modifier Compétition]
     E --> E2[Supprimer Compétition]
-    
+
+    E--> J[Comepetiteur]
+
     E--> I1[Classement]
+    E --> L[Arbitrage]
+    
+    
+    
+    
     
     L --> L1[Chronomètre Obstacle]
     L --> L2[Noter]
